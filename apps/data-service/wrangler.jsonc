@@ -12,4 +12,12 @@
   "observability": {
     "enabled": true,
   },
+
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "sprintpilot-storage-prod",          
+      "preview_bucket_name": "sprintpilot-storage-dev" 
+    }
+  ]
 }

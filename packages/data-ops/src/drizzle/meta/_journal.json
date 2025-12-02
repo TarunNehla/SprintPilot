@@ -15,6 +15,13 @@
       "when": 1764688897945,
       "tag": "0001_smiling_shen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1764699168118,
+      "tag": "0002_military_mulholland_black",
+      "breakpoints": true
     }
   ]
 }

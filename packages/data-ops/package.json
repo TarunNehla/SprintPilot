@@ -11,6 +11,14 @@
       "default": "./dist/database/*.js",
       "types": "./dist/database/*.d.ts"
     },
+    "./drizzle/*": {
+      "default": "./dist/drizzle/*.js",
+      "types": "./dist/drizzle/*.d.ts"
+    },
+    "./storage/*": {
+      "default": "./dist/storage/*.js",
+      "types": "./dist/storage/*.d.ts"
+    },
     "./zod-schema/*": {
       "default": "./dist/zod-schema/*.js",
       "types": "./dist/zod-schema/*.d.ts"

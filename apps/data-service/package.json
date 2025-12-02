@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev --x-remote-bindings",
+    "dev": "wrangler dev --remote",
+    "dev:local": "wrangler dev --x-remote-bindings",
     "start": "wrangler dev",
     "test": "vitest",
     "cf-typegen": "wrangler types --env-interface BaseEnv"
@@ -18,6 +19,7 @@
   },
   "dependencies": {
     "@repo/data-ops": "workspace:*",
+    "drizzle-orm": "^0.44.5",
     "hono": "^4.8.3",
     "zod": "^3.25.67"
   }

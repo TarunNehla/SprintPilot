@@ -1,0 +1,64 @@
+### Test API Endpoints for data-service
+### Base URL
+@baseUrl = http://localhost:8787
+
+### Variables (update these after creating resources)
+@projectId = 297e6bc9-3d67-4873-8a18-893401116330
+@docId = 05567937-437a-468a-8106-e338c0d9bc65
+@ownerId = 8DmS1YCNa4rpnPFoU521iAxzlt7I4iZe
+
+###############################################
+# R2 Storage Tests
+###############################################
+
+### Test R2 Write
+POST {{baseUrl}}/test/r2/write
+Content-Type: application/json
+
+{
+  "key": "test/hello.json",
+  "content": {
+    "msg": "hello from R2",
+    "timestamp": "2025-12-02"
+  }
+}
+
+### Test R2 Read
+GET {{baseUrl}}/test/r2/read/test/hello.json
+
+###############################################
+# Database Tests
+###############################################
+
+### Create Project
+# @name createProject
+POST {{baseUrl}}/test/db/project
+Content-Type: application/json
+
+{
+  "name": "Test Project",
+  "ownerId": "{{ownerId}}",
+  "description": "This is a test project for MVP"
+}
+
+### Create Doc (DB + R2)
+# @name createDoc
+POST {{baseUrl}}/test/db/doc
+Content-Type: application/json
+
+{
+  "projectId": "{{projectId}}",
+  "title": "Architecture Design",
+  "docType": "design",
+  "content": "This document describes the system architecture for Project Copilot. We use Cloudflare Workers, R2 for storage, and Neon Postgres with pgvector for embeddings."
+}
+
+### Get Doc with Content from R2
+GET {{baseUrl}}/test/db/doc/{{projectId}}/{{docId}}
+
+###############################################
+# Health Check
+###############################################
+
+### Health Check
+GET {{baseUrl}}/

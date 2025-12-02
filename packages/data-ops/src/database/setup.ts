@@ -1,17 +1,14 @@
-// packages/data-ops/src/database/setup.ts
-import { drizzle } from "drizzle-orm/planetscale-serverless";
+// packages/data-ops/database/setup.ts
+import { drizzle } from "drizzle-orm/neon-http";
 
 let db: ReturnType<typeof drizzle>;
 
-export function initDatabase(connection: {
-  host: string;
-  username: string;
-  password: string;
-}) {
+export function initDatabase(url?: string) {
   if (db) {
     return db;
   }
-  db = drizzle({ connection });
+  const connectionString = url || process.env.DATABASE_URL!;
+  db = drizzle(connectionString);
   return db;
 }
 

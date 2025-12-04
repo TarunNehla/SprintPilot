@@ -21,6 +21,12 @@ const HARDCODED_OWNER_ID = "8DmS1YCNa4rpnPFoU521iAxzlt7I4iZe";
 
 export const app = new Hono<{ Bindings: Env }>();
 
+// Database initialization middleware
+app.use("*", async (c, next) => {
+  initDatabase(c.env.DATABASE_URL);
+  await next();
+});
+
 app.get("/", (c) => {
   return c.text("Hello World");
 });
@@ -66,7 +72,6 @@ app.get("/test/r2/read/:key{.+}", async (c) => {
 // Test DB: Create project
 app.post("/test/db/project", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
 
     const { name, ownerId, description } = await c.req.json();
@@ -91,7 +96,6 @@ app.post("/test/db/project", async (c) => {
 // Test DB + R2: Create doc
 app.post("/test/db/doc", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
     const bucket = c.env.STORAGE;
 
@@ -127,7 +131,6 @@ app.post("/test/db/doc", async (c) => {
 // Test: Get doc with content from R2
 app.get("/test/db/doc/:projectId/:docId", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
     const bucket = c.env.STORAGE;
 
@@ -161,7 +164,6 @@ app.get("/test/db/doc/:projectId/:docId", async (c) => {
 // POST /api/projects - Create new project
 app.post("/api/projects", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
 
     const body = createProjectSchema.parse(await c.req.json());
@@ -189,7 +191,6 @@ app.post("/api/projects", async (c) => {
 // GET /api/projects/:projectId - Get single project
 app.get("/api/projects/:projectId", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
 
     const projectId = c.req.param("projectId");
@@ -213,7 +214,6 @@ app.get("/api/projects/:projectId", async (c) => {
 // GET /api/projects - List all projects for owner
 app.get("/api/projects", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
 
     const projectList = await db
@@ -232,7 +232,6 @@ app.get("/api/projects", async (c) => {
 // POST /api/projects/:projectId/docs - Create new doc
 app.post("/api/projects/:projectId/docs", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
     const bucket = c.env.STORAGE;
 
@@ -284,7 +283,6 @@ app.post("/api/projects/:projectId/docs", async (c) => {
 // GET /api/projects/:projectId/docs/:docId - Get doc with content
 app.get("/api/projects/:projectId/docs/:docId", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
     const bucket = c.env.STORAGE;
 
@@ -323,7 +321,6 @@ app.get("/api/projects/:projectId/docs/:docId", async (c) => {
 // GET /api/projects/:projectId/docs - List all docs for project
 app.get("/api/projects/:projectId/docs", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
 
     const projectId = c.req.param("projectId");
@@ -342,7 +339,6 @@ app.get("/api/projects/:projectId/docs", async (c) => {
 // PUT /api/projects/:projectId/docs/:docId - Update doc
 app.put("/api/projects/:projectId/docs/:docId", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
     const bucket = c.env.STORAGE;
 
@@ -404,7 +400,6 @@ app.put("/api/projects/:projectId/docs/:docId", async (c) => {
 // POST /api/projects/:projectId/issues - Create new issue
 app.post("/api/projects/:projectId/issues", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
     const bucket = c.env.STORAGE;
 
@@ -455,7 +450,6 @@ app.post("/api/projects/:projectId/issues", async (c) => {
 // GET /api/projects/:projectId/issues/:issueId - Get issue with description
 app.get("/api/projects/:projectId/issues/:issueId", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
     const bucket = c.env.STORAGE;
 
@@ -494,7 +488,6 @@ app.get("/api/projects/:projectId/issues/:issueId", async (c) => {
 // GET /api/projects/:projectId/issues - List all issues for project
 app.get("/api/projects/:projectId/issues", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
 
     const projectId = c.req.param("projectId");
@@ -513,7 +506,6 @@ app.get("/api/projects/:projectId/issues", async (c) => {
 // PUT /api/projects/:projectId/issues/:issueId - Update issue
 app.put("/api/projects/:projectId/issues/:issueId", async (c) => {
   try {
-    initDatabase(c.env.DATABASE_URL);
     const db = getDb();
     const bucket = c.env.STORAGE;
 

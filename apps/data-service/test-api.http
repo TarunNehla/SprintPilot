@@ -1,14 +1,131 @@
-### Test API Endpoints for data-service
-### Base URL
+# SprintPilot Data Service API Tests
+
+### Base URLs
 @baseUrl = http://localhost:8787
+# @baseUrl = https://project-copilot-data-service.tarundhillon14330.workers.dev
 
 ### Variables (update these after creating resources)
-@projectId = 297e6bc9-3d67-4873-8a18-893401116330
-@docId = 05567937-437a-468a-8106-e338c0d9bc65
-@ownerId = 8DmS1YCNa4rpnPFoU521iAxzlt7I4iZe
+@projectId = cbdb4743-d375-4458-b7ef-0cb47bc02963
+@docId = 70f0af15-d202-47dd-82b1-88bdb9b21a84
+@issueId = 89ea82dc-46b2-4577-883d-38479dc03327
 
 ###############################################
-# R2 Storage Tests
+# PROJECT ENDPOINTS
+###############################################
+
+### Create Project
+# @name createProject
+POST {{baseUrl}}/api/projects
+Content-Type: application/json
+
+{
+  "name": "My First Project",
+  "description": "Testing Phase 2 CRUD API"
+}
+
+### Get Project by ID
+GET {{baseUrl}}/api/projects/{{projectId}}
+
+### List All Projects
+GET {{baseUrl}}/api/projects
+
+###############################################
+# DOC ENDPOINTS
+###############################################
+
+### Create Doc
+# @name createDoc
+POST {{baseUrl}}/api/projects/{{projectId}}/docs
+Content-Type: application/json
+
+{
+  "title": "System Architecture",
+  "docType": "design",
+  "content": "This document describes the overall system architecture. We use Cloudflare Workers for the backend API, R2 for storage, and Postgres with pgvector for the database."
+}
+
+### Get Doc by ID (with content)
+GET {{baseUrl}}/api/projects/{{projectId}}/docs/{{docId}}
+
+### List All Docs in Project
+GET {{baseUrl}}/api/projects/{{projectId}}/docs
+
+### Update Doc
+PUT {{baseUrl}}/api/projects/{{projectId}}/docs/{{docId}}
+Content-Type: application/json
+
+{
+  "title": "System Architecture v2",
+  "docType": "design",
+  "content": "Updated architecture: Added Cloudflare Queues for async processing and Workers AI for embeddings.",
+  "status": "active"
+}
+
+###############################################
+# ISSUE ENDPOINTS
+###############################################
+
+### Create Issue
+# @name createIssue
+POST {{baseUrl}}/api/projects/{{projectId}}/issues
+Content-Type: application/json
+
+{
+  "title": "Implement authentication middleware",
+  "description": "Add Better Auth session validation middleware to protect API routes. Should validate session token from Authorization header and set userId in context.",
+  "priority": "high"
+}
+
+### Get Issue by ID (with description)
+GET {{baseUrl}}/api/projects/{{projectId}}/issues/{{issueId}}
+
+### List All Issues in Project
+GET {{baseUrl}}/api/projects/{{projectId}}/issues
+
+### Update Issue
+PUT {{baseUrl}}/api/projects/{{projectId}}/issues/{{issueId}}
+Content-Type: application/json
+
+{
+  "title": "Implement authentication middleware",
+  "description": "Add Better Auth session validation middleware to protect API routes. Should validate session token from Authorization header and set userId in context. UPDATED: Will be done in Phase 3.",
+  "status": "in_progress",
+  "priority": "medium"
+}
+
+###############################################
+# ERROR CASE TESTS
+###############################################
+
+### Test 404 - Non-existent Project
+GET {{baseUrl}}/api/projects/00000000-0000-0000-0000-000000000000
+
+### Test 400 - Invalid Doc Type
+POST {{baseUrl}}/api/projects/{{projectId}}/docs
+Content-Type: application/json
+
+{
+  "title": "Test",
+  "docType": "invalid-type",
+  "content": "This should fail"
+}
+
+### Test 400 - Missing Required Field
+POST {{baseUrl}}/api/projects
+Content-Type: application/json
+
+{
+  "description": "No name field"
+}
+
+### Test 404 - Doc for Wrong Project
+GET {{baseUrl}}/api/projects/00000000-0000-0000-0000-000000000000/docs/{{docId}}
+
+### Test 404 - Non-existent Issue
+GET {{baseUrl}}/api/projects/{{projectId}}/issues/00000000-0000-0000-0000-000000000000
+
+###############################################
+# LEGACY TEST ROUTES (for debugging)
 ###############################################
 
 ### Test R2 Write
@@ -19,45 +136,39 @@ Content-Type: application/json
   "key": "test/hello.json",
   "content": {
     "msg": "hello from R2",
-    "timestamp": "2025-12-02"
+    "timestamp": "2025-12-04"
   }
 }
 
 ### Test R2 Read
 GET {{baseUrl}}/test/r2/read/test/hello.json
 
-###############################################
-# Database Tests
-###############################################
-
-### Create Project
-# @name createProject
+### Test DB: Create Project (legacy)
 POST {{baseUrl}}/test/db/project
 Content-Type: application/json
 
 {
-  "name": "Test Project",
-  "ownerId": "{{ownerId}}",
-  "description": "This is a test project for MVP"
+  "name": "Test Project Legacy",
+  "ownerId": "8DmS1YCNa4rpnPFoU521iAxzlt7I4iZe",
+  "description": "Legacy test endpoint"
 }
 
-### Create Doc (DB + R2)
-# @name createDoc
+### Test DB: Create Doc (legacy)
 POST {{baseUrl}}/test/db/doc
 Content-Type: application/json
 
 {
   "projectId": "{{projectId}}",
-  "title": "Architecture Design",
-  "docType": "design",
-  "content": "This document describes the system architecture for Project Copilot. We use Cloudflare Workers, R2 for storage, and Neon Postgres with pgvector for embeddings."
+  "title": "Legacy Doc",
+  "docType": "note",
+  "content": "Testing legacy endpoint"
 }
 
-### Get Doc with Content from R2
+### Test DB: Get Doc (legacy)
 GET {{baseUrl}}/test/db/doc/{{projectId}}/{{docId}}
 
 ###############################################
-# Health Check
+# HEALTH CHECK
 ###############################################
 
 ### Health Check

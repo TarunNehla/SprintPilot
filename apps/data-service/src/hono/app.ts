@@ -15,6 +15,7 @@ import {
   createIssueSchema,
   updateIssueSchema,
 } from "@repo/data-ops/zod-schema/projects";
+import type { DocIndexingMessage } from "@repo/data-ops/zod-schema/queues";
 
 // Hardcoded owner ID for MVP (no auth middleware yet)
 const HARDCODED_OWNER_ID = "8DmS1YCNa4rpnPFoU521iAxzlt7I4iZe";
@@ -271,6 +272,19 @@ app.post("/api/projects/:projectId/docs", async (c) => {
       })
       .returning();
 
+    // Enqueue doc for indexing (non-blocking, fails gracefully in local dev)
+    try {
+      await c.env.DOC_INDEXING_QUEUE.send({
+        projectId,
+        docId,
+        r2_key: r2Key,
+        op: "upsert",
+        timestamp: new Date().toISOString(),
+      } as DocIndexingMessage);
+    } catch (queueError) {
+      console.warn("Failed to enqueue doc for indexing:", queueError);
+    }
+
     return c.json(doc, 201);
   } catch (error: any) {
     if (error.name === "ZodError") {
@@ -385,6 +399,19 @@ app.put("/api/projects/:projectId/docs/:docId", async (c) => {
       .set(updateData)
       .where(eq(projectDocs.id, docId))
       .returning();
+
+    // Enqueue doc for re-indexing (non-blocking, fails gracefully in local dev)
+    try {
+      await c.env.DOC_INDEXING_QUEUE.send({
+        projectId,
+        docId,
+        r2_key: existingDoc.r2Key,
+        op: "upsert",
+        timestamp: new Date().toISOString(),
+      } as DocIndexingMessage);
+    } catch (queueError) {
+      console.warn("Failed to enqueue doc for re-indexing:", queueError);
+    }
 
     return c.json(doc);
   } catch (error: any) {

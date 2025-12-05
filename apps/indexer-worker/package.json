@@ -1,0 +1,26 @@
+{
+  "name": "indexer-worker",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev --remote",
+    "dev:local": "wrangler dev --x-remote-bindings",
+    "start": "wrangler dev",
+    "test": "vitest",
+    "cf-typegen": "wrangler types --env-interface BaseEnv"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.19",
+    "@cloudflare/workers-types": "^4.20250823.0",
+    "@types/node": "^22.15.19",
+    "typescript": "^5.5.2",
+    "vitest": "~3.2.0",
+    "wrangler": "^4.24.3"
+  },
+  "dependencies": {
+    "@repo/data-ops": "workspace:*",
+    "drizzle-orm": "^0.44.5",
+    "zod": "^3.25.67"
+  }
+}

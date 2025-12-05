@@ -1,8 +1,8 @@
 # SprintPilot Data Service API Tests
 
 ### Base URLs
-@baseUrl = http://localhost:8787
-# @baseUrl = https://project-copilot-data-service.tarundhillon14330.workers.dev
+# @baseUrl = http://localhost:8787
+@baseUrl = https://project-copilot-data-service.tarundhillon14330.workers.dev
 
 ### Variables (update these after creating resources)
 @projectId = cbdb4743-d375-4458-b7ef-0cb47bc02963
@@ -41,7 +41,7 @@ Content-Type: application/json
 {
   "title": "System Architecture",
   "docType": "design",
-  "content": "This document describes the overall system architecture. We use Cloudflare Workers for the backend API, R2 for storage, and Postgres with pgvector for the database."
+  "content": "This tarun test test document describes the overall system architecture. We use Cloudflare Workers for the backend API, R2 for storage, and Postgres with pgvector for the database."
 }
 
 ### Get Doc by ID (with content)

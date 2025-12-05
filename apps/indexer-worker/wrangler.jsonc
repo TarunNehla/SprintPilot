@@ -3,14 +3,26 @@
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "project-copilot-data-service",
+  "$schema": "../data-service/node_modules/wrangler/config-schema.json",
+  "name": "project-copilot-indexer-worker",
   "main": "./src/index.ts",
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
 
   "observability": {
-    "enabled": true,
+    "enabled": true
+  },
+
+  "queues": {
+    "consumers": [
+      {
+        "queue": "doc-indexing",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "dead_letter_queue": "doc-indexing-dlq"
+      }
+    ]
   },
 
   "r2_buckets": [
@@ -21,12 +33,7 @@
     }
   ],
 
-  "queues": {
-    "producers": [
-      {
-        "binding": "DOC_INDEXING_QUEUE",
-        "queue": "doc-indexing"
-      }
-    ]
+  "ai": {
+    "binding": "AI"
   }
 }

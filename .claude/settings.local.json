@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(cat:*)",
-      "Bash(pnpm run build)"
+      "Bash(pnpm run build)",
+      "WebSearch",
+      "Bash(pnpm run build:data-ops:*)"
     ],
     "deny": [],
     "ask": []

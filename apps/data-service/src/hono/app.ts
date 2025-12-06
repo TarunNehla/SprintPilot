@@ -16,9 +16,31 @@ import {
   updateIssueSchema,
 } from "@repo/data-ops/zod-schema/projects";
 import type { DocIndexingMessage } from "@repo/data-ops/zod-schema/queues";
+import { ragQuerySchema } from "@repo/data-ops/zod-schema/rag";
+import {
+  hybridSearch,
+  logRagQuery,
+  getRagAnalytics,
+} from "@repo/data-ops/queries/rag";
 
 // Hardcoded owner ID for MVP (no auth middleware yet)
 const HARDCODED_OWNER_ID = "8DmS1YCNa4rpnPFoU521iAxzlt7I4iZe";
+
+// Max file size: 2MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
+
+// Helper: Infer doc type from file extension
+function inferDocType(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  const typeMap: Record<string, string> = {
+    md: "note",
+    markdown: "note",
+    txt: "note",
+    json: "other",
+    pdf: "other",
+  };
+  return typeMap[ext] || "other";
+}
 
 export const app = new Hono<{ Bindings: Env }>();
 
@@ -230,7 +252,7 @@ app.get("/api/projects", async (c) => {
 
 // ===== DOC ROUTES =====
 
-// POST /api/projects/:projectId/docs - Create new doc
+// POST /api/projects/:projectId/docs - Create new doc (supports file upload)
 app.post("/api/projects/:projectId/docs", async (c) => {
   try {
     const db = getDb();
@@ -249,14 +271,75 @@ app.post("/api/projects/:projectId/docs", async (c) => {
       return c.json({ error: "Project not found" }, 404);
     }
 
-    const body = createDocSchema.parse(await c.req.json());
+    // Parse FormData
+    const formData = await c.req.formData();
+    const file = formData.get("file") as File | null;
+
+    if (!file) {
+      return c.json({ error: "No file provided" }, 400);
+    }
+
+    if (file.size === 0) {
+      return c.json({ error: "File is empty" }, 400);
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return c.json(
+        {
+          error: "File too large",
+          details: `Max size is 2MB, got ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+        },
+        400
+      );
+    }
+
+    // Extract title from form field or use filename
+    let title = (formData.get("title") as string) || file.name;
+
+    // Remove file extension from auto-generated title
+    if (!formData.get("title")) {
+      title = title.replace(/\.[^/.]+$/, "");
+    }
+
+    // Infer docType from file extension or use provided value
+    let docType = (formData.get("docType") as string) || inferDocType(file.name);
+
+    // Validate extracted data
+    let body;
+    try {
+      body = createDocSchema.parse({
+        title: title || undefined,
+        docType: docType || undefined,
+      });
+    } catch (validationError: any) {
+      console.error("Validation error:", {
+        title,
+        docType,
+        error: validationError.errors || validationError.message,
+      });
+      return c.json(
+        {
+          error: "Invalid request",
+          details: validationError.errors || validationError.message,
+        },
+        400
+      );
+    }
+
     const docId = crypto.randomUUID();
+
+    // Read file content
+    const fileContent = await file.text();
+
+    // Ensure title and docType have values
+    const finalTitle = body.title || title;
+    const finalDocType: "design" | "note" | "retro" | "other" = body.docType || (inferDocType(file.name) as "design" | "note" | "retro" | "other");
 
     // Store content in R2
     const r2Key = await putDocContent(bucket, projectId, docId, {
-      title: body.title,
-      content: body.content,
-      type: body.docType,
+      title: finalTitle,
+      content: fileContent,
+      type: finalDocType,
     });
 
     // Store metadata in DB
@@ -265,8 +348,8 @@ app.post("/api/projects/:projectId/docs", async (c) => {
       .values({
         id: docId,
         projectId: projectId,
-        title: body.title,
-        docType: body.docType,
+        title: finalTitle,
+        docType: finalDocType,
         status: "active",
         r2Key: r2Key,
       })
@@ -590,3 +673,66 @@ app.put("/api/projects/:projectId/issues/:issueId", async (c) => {
     return c.json({ error: String(error) }, 500);
   }
 });
+
+// ===== RAG ROUTES =====
+
+// POST /api/rag/query - Query project knowledge base with hybrid search
+app.post("/api/rag/query", async (c) => {
+  const startTime = Date.now();
+
+  try {
+    const body = ragQuerySchema.parse(await c.req.json());
+    const { projectId, query, filters, config } = body;
+
+    // Perform search
+    const results = await hybridSearch({
+      projectId,
+      query,
+      ai: c.env.AI,
+      filters,
+      limit: config?.limit,
+      offset: config?.offset,
+      hybridWeight: config?.hybridWeight,
+      topK: config?.topK,
+    });
+
+    const queryTime = Date.now() - startTime;
+
+    // Log query asynchronously (non-blocking)
+    c.executionCtx.waitUntil(
+      logRagQuery({
+        projectId,
+        query,
+        filters: filters || null,
+        resultCount: results.length,
+        latency: queryTime,
+      })
+    );
+
+    return c.json({
+      results,
+      metadata: {
+        totalResults: results.length,
+        queryTime,
+      },
+    });
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return c.json({ error: "Invalid request", details: error.errors }, 400);
+    }
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// GET /api/rag/analytics/:projectId - Get RAG analytics for project
+app.get("/api/rag/analytics/:projectId", async (c) => {
+  try {
+    const projectId = c.req.param("projectId");
+    const analytics = await getRagAnalytics(projectId);
+
+    return c.json(analytics);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+

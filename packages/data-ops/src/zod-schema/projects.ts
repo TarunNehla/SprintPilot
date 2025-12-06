@@ -25,9 +25,8 @@ export const projectResponseSchema = z.object({
 // ===== DOC SCHEMAS =====
 
 export const createDocSchema = z.object({
-  title: z.string().min(1).max(300),
-  docType: docTypeEnum,
-  content: z.string().min(1).max(100000),
+  title: z.string().min(1).max(300).optional(),
+  docType: docTypeEnum.optional(),
 });
 
 export const updateDocSchema = z.object({

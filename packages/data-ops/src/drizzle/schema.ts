@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, pgEnum, index, customType } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, pgEnum, index, customType, jsonb, boolean } from "drizzle-orm/pg-core";
 import { auth_user } from "./auth-schema";
 
 // Custom vector type for pgvector (384 dimensions for bge-small-en-v1.5)
@@ -91,4 +91,24 @@ export const docChunks = pgTable(
     indexedAt: timestamp("indexed_at"),
   },
   (table) => [index("doc_chunks_docId_idx").on(table.docId)]
+);
+
+// RAG Queries table (for analytics)
+export const ragQueries = pgTable(
+  "rag_queries",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    query: text("query").notNull(),
+    filters: jsonb("filters"),
+    resultCount: integer("result_count").notNull(),
+    latency: integer("latency").notNull(), // in milliseconds
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("rag_queries_projectId_idx").on(table.projectId),
+    index("rag_queries_createdAt_idx").on(table.createdAt),
+  ]
 );

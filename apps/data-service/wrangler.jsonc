@@ -28,5 +28,9 @@
         "queue": "doc-indexing"
       }
     ]
+  },
+
+  "ai": {
+    "binding": "AI"
   }
 }

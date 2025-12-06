@@ -33,7 +33,49 @@ GET {{baseUrl}}/api/projects
 # DOC ENDPOINTS
 ###############################################
 
-### Create Doc
+### Create Doc (File Upload - Markdown)
+# @name createDocFile
+POST {{baseUrl}}/api/projects/{{projectId}}/docs
+Content-Type: multipart/form-data; boundary=----FormBoundary7MA4YWxkTrZu0gW
+
+------FormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="comprehensive-ai-guide.md"
+Content-Type: text/markdown
+
+< ../../../test-docs/comprehensive-ai-guide.md
+------FormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="docType"
+
+design
+------FormBoundary7MA4YWxkTrZu0gW--
+
+### Create Doc (File Upload - Text)
+POST {{baseUrl}}/api/projects/{{projectId}}/docs
+Content-Type: multipart/form-data; boundary=----FormBoundary7MA4YWxkTrZu0gW
+
+------FormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="notes.txt"
+Content-Type: text/plain
+
+< ../../../test-docs/notes.txt
+------FormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="title"
+
+Project Meeting Notes
+------FormBoundary7MA4YWxkTrZu0gW--
+
+### Create Doc (File Upload - JSON)
+POST {{baseUrl}}/api/projects/{{projectId}}/docs
+Content-Type: multipart/form-data; boundary=----FormBoundary7MA4YWxkTrZu0gW
+
+------FormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="config.json"
+Content-Type: application/json
+
+< ../../../test-docs/config.json
+------FormBoundary7MA4YWxkTrZu0gW--
+
+### Create Doc (Legacy - JSON)
 # @name createDoc
 POST {{baseUrl}}/api/projects/{{projectId}}/docs
 Content-Type: application/json
@@ -168,8 +210,93 @@ Content-Type: application/json
 GET {{baseUrl}}/test/db/doc/{{projectId}}/{{docId}}
 
 ###############################################
+# RAG SEARCH ENDPOINTS (Phase 4)
+###############################################
+
+### RAG: Pure Vector Search (semantic)
+# @name ragVectorSearch
+POST {{baseUrl}}/api/rag/query
+Content-Type: application/json
+
+{
+  "projectId": "{{projectId}}",
+  "query": "How do I create a new branch in Git?",
+  "config": {
+    "hybridWeight": 1,
+    "limit": 10
+  }
+}
+
+### RAG: Pure Keyword Search
+# @name ragKeywordSearch
+POST {{baseUrl}}/api/rag/query
+Content-Type: application/json
+
+{
+  "projectId": "{{projectId}}",
+  "query": "What are the ethical implications of AI systems",
+  "config": {
+    "hybridWeight": 0,
+    "limit": 5
+  }
+}
+
+### RAG: Hybrid Search (balanced)
+# @name ragHybridSearch
+POST {{baseUrl}}/api/rag/query
+Content-Type: application/json
+
+{
+  "projectId": "{{projectId}}",
+  "query": "What are the ethical implications of AI systems",
+  "config": {
+    "hybridWeight": 0.5,
+    "limit": 5,
+    "topK": 20
+  }
+}
+
+### RAG: Search with Filters
+# @name ragSearchFilters
+POST {{baseUrl}}/api/rag/query
+Content-Type: application/json
+
+{
+  "projectId": "{{projectId}}",
+  "query": "architecture",
+  "filters": {
+    "docTypes": ["design"],
+    "statuses": ["active"]
+  },
+  "config": {
+    "hybridWeight": 0.5,
+    "limit": 5
+  }
+}
+
+### RAG: Search with Pagination
+# @name ragSearchPagination
+POST {{baseUrl}}/api/rag/query
+Content-Type: application/json
+
+{
+  "projectId": "{{projectId}}",
+  "query": "cloudflare",
+  "config": {
+    "hybridWeight": 0.5,
+    "limit": 2,
+    "offset": 2
+  }
+}
+
+### RAG: Get Analytics
+# @name ragAnalytics
+GET {{baseUrl}}/api/rag/analytics/{{projectId}}
+
+###############################################
 # HEALTH CHECK
 ###############################################
 
 ### Health Check
 GET {{baseUrl}}/
+

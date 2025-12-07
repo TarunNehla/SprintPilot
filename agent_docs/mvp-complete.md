@@ -39,6 +39,13 @@ Complete RAG-powered project management platform: Postgres schema + R2 storage +
 - [x] Migration: rag_queries table, text_tsv GENERATED column + GIN index
 - [x] Deployment: AI binding configured, live on production
 
+### ✅ Phase 5: ADK Agent Service (DONE)
+- [x] Tools: `api_client.py` with 8 functions (search, docs CRUD, issues CRUD)
+- [x] Agent: `my_agent` configured
+- [x] Configuration: `PROJECT_ID_DEFAULT`, optional `project_id` in tools
+- [x] Logic: Updated system instructions to fully utilize available tools
+
+
 ## Current State
 ✅ Auth: Google OAuth via Better Auth (4 auth_* tables)
 ✅ Schema: 4 domain tables (projects, project_docs, project_issues, doc_chunks), 2 analytics tables (rag_queries)

@@ -1,170 +1,68 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { 
-  Route, 
-  Database, 
-  Zap, 
-  Shield, 
-  Palette, 
-  Code,
-  Server,
-  Layers,
-  GitBranch
+  Files, 
+  Search, 
+  ListTodo, 
+  Bot,
+  Layout
 } from "lucide-react"
 
 const features = [
   {
-    icon: Route,
-    title: "TanStack Router",
-    description: "Type-safe, file-based routing with powerful features like nested layouts, loaders, and search params validation.",
-    badge: "Type-Safe"
+    icon: Layout,
+    title: "Project Hub",
+    description: "Centralized workspace for all your ongoing projects. Keep everything organized in one place.",
   },
   {
-    icon: Database,
-    title: "TanStack Query",
-    description: "Powerful data synchronization with server state management, caching, and background updates built-in.",
-    badge: "Server State"
+    icon: Files,
+    title: "Document Management",
+    description: "Upload and manage project documentation effortlessly. Support for multiple file formats.",
   },
   {
-    icon: Code,
-    title: "React 19",
-    description: "Latest React with concurrent features, improved performance, and modern development patterns.",
-    badge: "Latest"
+    icon: ListTodo,
+    title: "Issue Tracking",
+    description: "Create, assign, and track issues. Stay on top of tasks and deadlines without the clutter.",
   },
   {
-    icon: Zap,
-    title: "Vite",
-    description: "Lightning-fast build tool with hot module replacement and optimized production builds.",
-    badge: "Fast"
+    icon: Search,
+    title: "Hybrid Search",
+    description: "Powerful search capability combining vector similarity and keyword matching to find exactly what you need.",
   },
   {
-    icon: Shield,
-    title: "TypeScript",
-    description: "Full TypeScript support with strict typing, IntelliSense, and compile-time error checking.",
-    badge: "Type-Safe"
-  },
-  {
-    icon: Palette,
-    title: "Tailwind CSS v4",
-    description: "Modern utility-first CSS framework with CSS variables and a comprehensive design system.",
-    badge: "Styling"
-  },
-  {
-    icon: Server,
-    title: "SSR Ready",
-    description: "Server-side rendering support with seamless hydration and SEO optimization out of the box.",
-    badge: "Performance"
-  },
-  {
-    icon: Layers,
-    title: "Shadcn/UI",
-    description: "Beautiful, accessible component library with customizable themes and modern design patterns.",
-    badge: "Components"
-  }
-]
-
-const templateFeatures = [
-  {
-    image: "/cloudflare.png",
-    title: "Edge Database",
-    description: "Serverless PostgreSQL with Cloudflare D1 or Hyperdrive. Edge-optimized with connection pooling and HTTP proxy to prevent connection overwhelm.",
-    badge: "Database",
-    highlight: true
-  },
-  {
-    image: "/better-auth.png",
-    title: "Better Auth",
-    description: "Complete authentication solution with social providers, email/password, and session management. Database-agnostic and edge-compatible.",
-    badge: "Authentication",
-    highlight: true
-  },
-  {
-    image: "/polar.png",
-    title: "Polar Payments",
-    description: "Modern subscription management and payment processing. No webhooks needed, developer-focused API with built-in product metadata.",
-    badge: "Payments",
-    highlight: true
-  },
-  {
-    image: "/pnpm.webp",
-    title: "Monorepo Architecture",
-    description: "Organized workspace structure with pnpm. Shared components, utilities, and configurations across multiple applications.",
-    badge: "Architecture",
-    highlight: true
+    icon: Bot,
+    title: "AI Agent",
+    description: "Consult with your project agent to get answers, summaries, and recommendations based on your knowledge base.",
   }
 ]
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="py-24 sm:py-32">
+    <section id="features" className="py-24 sm:py-32 bg-secondary/20">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        {/* Template Features Section */}
-        <div className="mx-auto max-w-2xl text-center">
+        <div className="mx-auto max-w-2xl text-center mb-16">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Production-Ready SaaS Template
+            Everything you need
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Pre-configured with authentication, database, and payments - ready to deploy
+            Manage your projects with a suite of powerful, AI-enhanced tools.
           </p>
         </div>
         
-        <div className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-6 sm:mt-20 lg:mx-0 lg:max-w-none lg:grid-cols-2 xl:grid-cols-4">
-          {templateFeatures.map((feature) => {
-            return (
-              <Card key={feature.title} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-primary/20">
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border bg-background p-2">
-                      <img 
-                        src={feature.image} 
-                        alt={feature.title}
-                        className="h-full w-full object-contain"
-                      />
-                    </div>
-                    <Badge variant="default" className="text-xs">
-                      {feature.badge}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-sm leading-relaxed">
-                    {feature.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-
-        {/* Core Technologies Section */}
-        <div className="mx-auto max-w-2xl text-center mt-24">
-          <h3 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Built with Modern Technologies
-          </h3>
-          <p className="mt-4 text-lg text-muted-foreground">
-            A carefully curated stack of the best tools and libraries for React development
-          </p>
-        </div>
-        
-        <div className="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-6 lg:mx-0 lg:max-w-none lg:grid-cols-2 xl:grid-cols-4">
+        <div className="mx-auto grid max-w-2xl grid-cols-1 gap-6 lg:mx-0 lg:max-w-none lg:grid-cols-3">
           {features.map((feature) => {
             const IconComponent = feature.icon
             return (
-              <Card key={feature.title} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+              <Card key={feature.title} className="bg-background border-border hover:border-foreground/50 transition-colors">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <IconComponent className="h-5 w-5 text-primary" />
+                  <div className="flex items-center gap-4 mb-2">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                      <IconComponent className="h-5 w-5 text-foreground" />
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      {feature.badge}
-                    </Badge>
+                    <CardTitle className="text-lg">{feature.title}</CardTitle>
                   </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-sm leading-relaxed">
+                  <CardDescription className="text-sm leading-relaxed text-muted-foreground">
                     {feature.description}
                   </CardDescription>
                 </CardContent>

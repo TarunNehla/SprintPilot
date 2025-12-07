@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { initDatabase, getDb } from "@repo/data-ops/database/setup";
 import { projects, projectDocs, projectIssues } from "@repo/data-ops/drizzle/schema";
+import { auth_user, auth_session } from "@repo/data-ops/drizzle/auth-schema";
 import {
   putDocContent,
   getDocContent,
@@ -22,9 +23,8 @@ import {
   logRagQuery,
   getRagAnalytics,
 } from "@repo/data-ops/queries/rag";
+import { cors } from 'hono/cors'
 
-// Hardcoded owner ID for MVP (no auth middleware yet)
-const HARDCODED_OWNER_ID = "8DmS1YCNa4rpnPFoU521iAxzlt7I4iZe";
 
 // Max file size: 2MB
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
@@ -42,13 +42,54 @@ function inferDocType(filename: string): string {
   return typeMap[ext] || "other";
 }
 
-export const app = new Hono<{ Bindings: Env }>();
+
+
+
+export const app = new Hono<{ 
+  Bindings: Env,
+  Variables: {
+    user: typeof auth_user.$inferSelect;
+    session: typeof auth_session.$inferSelect;
+  }
+}>();
+
+app.use('/*', cors())
 
 // Database initialization middleware
 app.use("*", async (c, next) => {
   initDatabase(c.env.DATABASE_URL);
   await next();
 });
+
+// Auth Middleware (Validator)
+// Auth Middleware (Validator)
+const authMiddleware = async (c: any, next: any) => {
+  const token = c.req.raw.headers.get("Authorization")?.replace("Bearer ", "");
+  
+  if (token) {
+      const db = getDb();
+      const [session] = await db.select().from(auth_session).where(eq(auth_session.token, token)).limit(1);
+      
+      if (session) {
+         if (new Date(session.expiresAt) > new Date()) {
+             const [user] = await db.select().from(auth_user).where(eq(auth_user.id, session.userId)).limit(1);
+             if (user) {
+                 c.set("user", user);
+                 c.set("session", session);
+                 await next();
+                 return;
+             }
+         }
+      }
+  }
+
+  return c.json({ error: "Unauthorized" }, 401);
+};
+
+
+
+// Auth Middleware
+
 
 app.get("/", (c) => {
   return c.text("Hello World");
@@ -185,9 +226,10 @@ app.get("/test/db/doc/:projectId/:docId", async (c) => {
 // ===== PROJECT ROUTES =====
 
 // POST /api/projects - Create new project
-app.post("/api/projects", async (c) => {
+app.post("/api/projects", authMiddleware, async (c) => {
   try {
     const db = getDb();
+    const user = c.get("user");
 
     const body = createProjectSchema.parse(await c.req.json());
     const projectId = crypto.randomUUID();
@@ -196,7 +238,7 @@ app.post("/api/projects", async (c) => {
       .insert(projects)
       .values({
         id: projectId,
-        ownerId: HARDCODED_OWNER_ID,
+        ownerId: user.id,
         name: body.name,
         description: body.description || null,
       })
@@ -212,9 +254,10 @@ app.post("/api/projects", async (c) => {
 });
 
 // GET /api/projects/:projectId - Get single project
-app.get("/api/projects/:projectId", async (c) => {
+app.get("/api/projects/:projectId", authMiddleware, async (c) => {
   try {
     const db = getDb();
+    const user = c.get("user");
 
     const projectId = c.req.param("projectId");
 
@@ -228,6 +271,10 @@ app.get("/api/projects/:projectId", async (c) => {
       return c.json({ error: "Project not found" }, 404);
     }
 
+    if (project.ownerId !== user.id) {
+       return c.json({ error: "Unauthorized" }, 403);
+    }
+
     return c.json(project);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
@@ -235,14 +282,15 @@ app.get("/api/projects/:projectId", async (c) => {
 });
 
 // GET /api/projects - List all projects for owner
-app.get("/api/projects", async (c) => {
+app.get("/api/projects", authMiddleware, async (c) => {
   try {
     const db = getDb();
+    const user = c.get("user");
 
     const projectList = await db
       .select()
       .from(projects)
-      .where(eq(projects.ownerId, HARDCODED_OWNER_ID));
+      .where(eq(projects.ownerId, user.id));
 
     return c.json(projectList);
   } catch (error) {
@@ -253,10 +301,11 @@ app.get("/api/projects", async (c) => {
 // ===== DOC ROUTES =====
 
 // POST /api/projects/:projectId/docs - Create new doc (supports file upload)
-app.post("/api/projects/:projectId/docs", async (c) => {
+app.post("/api/projects/:projectId/docs", authMiddleware, async (c) => {
   try {
     const db = getDb();
     const bucket = c.env.STORAGE;
+    const user = c.get("user");
 
     const projectId = c.req.param("projectId");
 
@@ -269,6 +318,10 @@ app.post("/api/projects/:projectId/docs", async (c) => {
 
     if (!project) {
       return c.json({ error: "Project not found" }, 404);
+    }
+
+    if (project.ownerId !== user.id) {
+       return c.json({ error: "Unauthorized" }, 403);
     }
 
     // Parse FormData
@@ -378,13 +431,29 @@ app.post("/api/projects/:projectId/docs", async (c) => {
 });
 
 // GET /api/projects/:projectId/docs/:docId - Get doc with content
-app.get("/api/projects/:projectId/docs/:docId", async (c) => {
+app.get("/api/projects/:projectId/docs/:docId", authMiddleware, async (c) => {
   try {
     const db = getDb();
     const bucket = c.env.STORAGE;
+    const user = c.get("user");
 
     const projectId = c.req.param("projectId");
     const docId = c.req.param("docId");
+
+    // Verify project ownership (implicit authorization for doc access)
+    const [project] = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (!project) {
+        return c.json({ error: "Project not found" }, 404);
+    }
+    
+    if (project.ownerId !== user.id) {
+        return c.json({ error: "Unauthorized" }, 403);
+    }
 
     // Get metadata from DB
     const [doc] = await db
@@ -416,11 +485,27 @@ app.get("/api/projects/:projectId/docs/:docId", async (c) => {
 });
 
 // GET /api/projects/:projectId/docs - List all docs for project
-app.get("/api/projects/:projectId/docs", async (c) => {
+app.get("/api/projects/:projectId/docs", authMiddleware, async (c) => {
   try {
     const db = getDb();
+    const user = c.get("user");
 
     const projectId = c.req.param("projectId");
+
+    // Verify project ownership
+    const [project] = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (!project) {
+      return c.json({ error: "Project not found" }, 404);
+    }
+
+    if (project.ownerId !== user.id) {
+       return c.json({ error: "Unauthorized" }, 403);
+    }
 
     const docs = await db
       .select()
@@ -434,13 +519,29 @@ app.get("/api/projects/:projectId/docs", async (c) => {
 });
 
 // PUT /api/projects/:projectId/docs/:docId - Update doc
-app.put("/api/projects/:projectId/docs/:docId", async (c) => {
+app.put("/api/projects/:projectId/docs/:docId", authMiddleware, async (c) => {
   try {
     const db = getDb();
     const bucket = c.env.STORAGE;
+    const user = c.get("user");
 
     const projectId = c.req.param("projectId");
     const docId = c.req.param("docId");
+
+    // Verify project ownership
+    const [project] = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (!project) {
+        return c.json({ error: "Project not found" }, 404);
+    }
+    
+    if (project.ownerId !== user.id) {
+        return c.json({ error: "Unauthorized" }, 403);
+    }
 
     // Verify doc exists and project matches
     const [existingDoc] = await db
@@ -508,10 +609,11 @@ app.put("/api/projects/:projectId/docs/:docId", async (c) => {
 // ===== ISSUE ROUTES =====
 
 // POST /api/projects/:projectId/issues - Create new issue
-app.post("/api/projects/:projectId/issues", async (c) => {
+app.post("/api/projects/:projectId/issues", authMiddleware, async (c) => {
   try {
     const db = getDb();
     const bucket = c.env.STORAGE;
+    const user = c.get("user");
 
     const projectId = c.req.param("projectId");
 
@@ -524,6 +626,10 @@ app.post("/api/projects/:projectId/issues", async (c) => {
 
     if (!project) {
       return c.json({ error: "Project not found" }, 404);
+    }
+
+    if (project.ownerId !== user.id) {
+       return c.json({ error: "Unauthorized" }, 403);
     }
 
     const body = createIssueSchema.parse(await c.req.json());
@@ -558,13 +664,29 @@ app.post("/api/projects/:projectId/issues", async (c) => {
 });
 
 // GET /api/projects/:projectId/issues/:issueId - Get issue with description
-app.get("/api/projects/:projectId/issues/:issueId", async (c) => {
+app.get("/api/projects/:projectId/issues/:issueId", authMiddleware, async (c) => {
   try {
     const db = getDb();
     const bucket = c.env.STORAGE;
+    const user = c.get("user");
 
     const projectId = c.req.param("projectId");
     const issueId = c.req.param("issueId");
+
+    // Verify project ownership
+    const [project] = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (!project) {
+        return c.json({ error: "Project not found" }, 404);
+    }
+    
+    if (project.ownerId !== user.id) {
+        return c.json({ error: "Unauthorized" }, 403);
+    }
 
     // Get metadata from DB
     const [issue] = await db
@@ -596,11 +718,27 @@ app.get("/api/projects/:projectId/issues/:issueId", async (c) => {
 });
 
 // GET /api/projects/:projectId/issues - List all issues for project
-app.get("/api/projects/:projectId/issues", async (c) => {
+app.get("/api/projects/:projectId/issues", authMiddleware, async (c) => {
   try {
     const db = getDb();
+    const user = c.get("user");
 
     const projectId = c.req.param("projectId");
+
+    // Verify project ownership
+    const [project] = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (!project) {
+      return c.json({ error: "Project not found" }, 404);
+    }
+
+    if (project.ownerId !== user.id) {
+       return c.json({ error: "Unauthorized" }, 403);
+    }
 
     const issues = await db
       .select()
@@ -614,13 +752,29 @@ app.get("/api/projects/:projectId/issues", async (c) => {
 });
 
 // PUT /api/projects/:projectId/issues/:issueId - Update issue
-app.put("/api/projects/:projectId/issues/:issueId", async (c) => {
+app.put("/api/projects/:projectId/issues/:issueId", authMiddleware, async (c) => {
   try {
     const db = getDb();
     const bucket = c.env.STORAGE;
+    const user = c.get("user");
 
     const projectId = c.req.param("projectId");
     const issueId = c.req.param("issueId");
+
+    // Verify project ownership
+    const [project] = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (!project) {
+        return c.json({ error: "Project not found" }, 404);
+    }
+    
+    if (project.ownerId !== user.id) {
+        return c.json({ error: "Unauthorized" }, 403);
+    }
 
     // Verify issue exists and project matches
     const [existingIssue] = await db
@@ -677,12 +831,29 @@ app.put("/api/projects/:projectId/issues/:issueId", async (c) => {
 // ===== RAG ROUTES =====
 
 // POST /api/rag/query - Query project knowledge base with hybrid search
-app.post("/api/rag/query", async (c) => {
+app.post("/api/rag/query", authMiddleware, async (c) => {
   const startTime = Date.now();
 
   try {
+    const db = getDb();
+    const user = c.get("user");
     const body = ragQuerySchema.parse(await c.req.json());
     const { projectId, query, filters, config } = body;
+
+    // Verify project ownership
+    const [project] = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (!project) {
+      return c.json({ error: "Project not found" }, 404);
+    }
+
+    if (project.ownerId !== user.id) {
+       return c.json({ error: "Unauthorized" }, 403);
+    }
 
     // Perform search
     const results = await hybridSearch({
@@ -725,9 +896,27 @@ app.post("/api/rag/query", async (c) => {
 });
 
 // GET /api/rag/analytics/:projectId - Get RAG analytics for project
-app.get("/api/rag/analytics/:projectId", async (c) => {
+app.get("/api/rag/analytics/:projectId", authMiddleware, async (c) => {
   try {
+    const db = getDb();
+    const user = c.get("user");
     const projectId = c.req.param("projectId");
+
+    // Verify project ownership
+    const [project] = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+
+    if (!project) {
+      return c.json({ error: "Project not found" }, 404);
+    }
+
+    if (project.ownerId !== user.id) {
+       return c.json({ error: "Unauthorized" }, 403);
+    }
+
     const analytics = await getRagAnalytics(projectId);
 
     return c.json(analytics);

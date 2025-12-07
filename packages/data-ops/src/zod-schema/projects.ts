@@ -80,3 +80,19 @@ export const issueResponseSchema = z.object({
 export const issueWithDescriptionSchema = issueResponseSchema.extend({
   description: z.string(),
 });
+
+// ===== TYPE EXPORTS =====
+export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+export type Project = z.infer<typeof projectResponseSchema>;
+
+export type CreateDocInput = z.infer<typeof createDocSchema>;
+export type UpdateDocInput = z.infer<typeof updateDocSchema>;
+export type Document = z.infer<typeof docResponseSchema>;
+export type DocumentWithContent = z.infer<typeof docWithContentSchema>;
+
+export type CreateIssueInput = z.infer<typeof createIssueSchema>;
+export type UpdateIssueInput = z.infer<typeof updateIssueSchema>;
+export type Issue = z.infer<typeof issueResponseSchema>;
+export type IssueWithDescription = z.infer<typeof issueWithDescriptionSchema>;
+export type IssuePriority = z.infer<typeof issuePriorityEnum>;
+export type IssueStatus = z.infer<typeof issueStatusEnum>;

@@ -5,6 +5,8 @@ import { Plus, Folder, FileText, ListTodo } from "lucide-react";
 import { useState } from "react";
 import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog";
 import { ProjectCard } from "@/components/dashboard/project-card";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
 
 export const Route = createFileRoute("/_auth/app/")({
   component: DashboardOverview,
@@ -18,12 +20,23 @@ function DashboardOverview() {
     navigate({ to: "/app/project/$projectId", params: { projectId } });
   };
   
-  // Mock projects data
-  const projects = [
-    { id: "1", name: "Website Redesign", docs: 12, issues: 5, updatedAt: "2h ago" },
-    { id: "2", name: "Mobile App API", docs: 8, issues: 2, updatedAt: "1d ago" },
-    { id: "3", name: "Internal Tools", docs: 3, issues: 0, updatedAt: "3d ago" },
-  ];
+const { data: projects = [], isLoading } = useQuery({
+    queryKey: ["projects"],
+    queryFn: api.getProjects,
+  });
+
+
+  // Correction: getProjects returns only project metadata. We might not have doc counts yet. 
+  // For MVP, we might show 0 or need a separate stats endpoint.
+  // Let's stick to what we have: projects.length.
+  
+  if (isLoading) {
+      return (
+          <div className="flex h-screen items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+      )
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-10">
@@ -51,7 +64,8 @@ function DashboardOverview() {
             <ListTodo className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">7</div>
+            <div className="text-3xl font-bold">-</div>
+             <p className="text-xs text-muted-foreground">Global stats coming soon</p>
           </CardContent>
         </Card>
         <Card className="shadow-none border-border/60 bg-secondary/10">
@@ -60,7 +74,8 @@ function DashboardOverview() {
             <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">23</div>
+            <div className="text-3xl font-bold">-</div>
+            <p className="text-xs text-muted-foreground">Global stats coming soon</p>
           </CardContent>
         </Card>
       </div>

@@ -17,12 +17,29 @@ interface CreateProjectDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
+import { CreateProjectInput } from "@repo/data-ops/zod-schema/projects";
+import { useState } from "react";
+
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
-  // Mock form handling
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
+  const createProjectMutation = useMutation({
+    mutationFn: (data: CreateProjectInput) => api.createProject(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      onOpenChange(false);
+      setName("");
+      setDescription("");
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      // Logic to create project
-      onOpenChange(false);
+      createProjectMutation.mutate({ name, description });
   }
 
   return (
@@ -42,6 +59,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 id="name"
                 placeholder="e.g. Website Redesign"
                 required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
@@ -49,6 +68,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               <Textarea
                 id="description"
                 placeholder="Brief description of the project..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
             </div>
           </div>
@@ -56,7 +77,9 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
              <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">Create Project</Button>
+            <Button type="submit" disabled={createProjectMutation.isPending}>
+              {createProjectMutation.isPending ? "Creating..." : "Create Project"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

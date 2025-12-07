@@ -2,7 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Folder, FileText, ListTodo, Search, Bot } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
+import { Loader2, Search, Folder, FileText, ListTodo, Bot } from "lucide-react";
+import { useState } from "react";
+// ... (other imports)
+
+
 
 export const Route = createFileRoute("/_auth/app/project/$projectId")({
   component: ProjectDetails,
@@ -11,14 +17,62 @@ export const Route = createFileRoute("/_auth/app/project/$projectId")({
 function ProjectDetails() {
   const { projectId } = Route.useParams();
 
+  const { data: project, isLoading: isProjectLoading } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => api.getProject(projectId),
+  });
+
+  const { data: docs = [], isLoading: isDocsLoading } = useQuery({
+    queryKey: ["project", projectId, "docs"],
+    queryFn: () => api.getProjectDocs(projectId),
+  });
+
+  const { data: issues = [], isLoading: isIssuesLoading } = useQuery({
+    queryKey: ["project", projectId, "issues"],
+    queryFn: () => api.getProjectIssues(projectId),
+  });
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]); 
+
+  const searchMutation = useMutation({
+      mutationFn: (query: string) => api.search({
+          projectId,
+          query,
+          config: { limit: 5, hybridWeight: 0.5, offset: 0, topK: 5 }
+      }),
+      onSuccess: (data) => {
+          setSearchResults(data.results);
+      }
+  });
+
+  const handleSearch = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!searchQuery.trim()) return;
+      searchMutation.mutate(searchQuery);
+  }
+
+  if (isProjectLoading) {
+      return (
+          <div className="flex h-screen items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+      )
+  }
+
+  if (!project) {
+      return <div className="p-8 text-center text-muted-foreground">Project not found</div>
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-10">
       <div className="flex items-center justify-between border-b pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Project Details</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
           <div className="flex items-center gap-2 text-muted-foreground mt-2">
              <span className="font-mono text-sm bg-muted px-2 py-0.5 rounded">ID: {projectId}</span>
           </div>
+          {project.description && <p className="mt-2 text-muted-foreground">{project.description}</p>}
         </div>
       </div>
 
@@ -73,6 +127,10 @@ function ProjectDetails() {
                 Upload Document
              </Button>
           </div>
+          
+          {isDocsLoading ? (
+               <div className="py-12 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : docs.length === 0 ? (
           <Card className="border-dashed border-2 shadow-none bg-secondary/5">
              <CardContent className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="rounded-full bg-secondary p-4 mb-4">
@@ -85,7 +143,34 @@ function ProjectDetails() {
                 <Button variant="outline">Upload First Document</Button>
              </CardContent>
           </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {docs.map(doc => (
+                    <Card key={doc.id} className="cursor-pointer hover:border-primary transition-colors">
+                        <CardContent className="p-6 space-y-2">
+                             <div className="flex items-start justify-between">
+                                <FileText className="h-5 w-5 text-primary" />
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    doc.docType === 'design' ? 'bg-blue-100 text-blue-700' :
+                                    doc.docType === 'note' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-gray-100 text-gray-700'
+                                }`}>
+                                    {doc.docType}
+                                </span>
+                             </div>
+                             <div>
+                                <h3 className="font-semibold truncate" title={doc.title}>{doc.title}</h3>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Last updated: {new Date(doc.updatedAt).toLocaleDateString()}
+                                </p>
+                             </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+          )}
         </TabsContent>
+
 
         <TabsContent value="issues" className="space-y-6 animate-in fade-in-50 slide-in-from-bottom-2">
           <div className="flex justify-between items-center">
@@ -98,6 +183,10 @@ function ProjectDetails() {
                 Create Issue
              </Button>
           </div>
+          
+          {isIssuesLoading ? (
+               <div className="py-12 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : issues.length === 0 ? (
            <Card className="border-dashed border-2 shadow-none bg-secondary/5">
              <CardContent className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="rounded-full bg-secondary p-4 mb-4">
@@ -110,7 +199,40 @@ function ProjectDetails() {
                 <Button variant="outline">Create First Issue</Button>
              </CardContent>
           </Card>
+          ) : (
+             <div className="space-y-4">
+                {issues.map(issue => (
+                    <Card key={issue.id} className="shadow-none border cursor-pointer hover:border-primary transition-colors">
+                        <CardContent className="p-4 flex items-center justify-between">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold">{issue.title}</h3>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                                        issue.status === 'open' ? 'bg-green-100 text-green-700' :
+                                        issue.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                        'bg-gray-100 text-gray-700'
+                                    }`}>
+                                        {issue.status.replace('_', ' ')}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                    <span>Priority: <span className={`capitalize ${
+                                        issue.priority === 'high' ? 'text-red-500 font-medium' :
+                                        issue.priority === 'medium' ? 'text-yellow-600' :
+                                        'text-green-600'
+                                    }`}>{issue.priority}</span></span>
+                                    <span>Created: {new Date(issue.createdAt).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+          )}
         </TabsContent>
+
+
+
 
         <TabsContent value="search" className="space-y-6 animate-in fade-in-50 slide-in-from-bottom-2">
           <div className="flex justify-between items-center">
@@ -120,17 +242,47 @@ function ProjectDetails() {
              </div>
           </div>
            <Card className="shadow-none">
-             <CardContent className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-                <div className="w-full max-w-lg relative">
-                    <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+             <CardContent className="p-6 space-y-6">
+                <form onSubmit={handleSearch} className="w-full relative">
+                    <Search className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
                     <input 
-                        className="w-full h-12 pl-10 pr-4 rounded-md border bg-background ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full h-12 pl-10 pr-24 rounded-md border bg-background ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         placeholder="Search for anything..." 
                     />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                    Try searching for "architecture", "api endpoints", or specific error codes.
-                </p>
+                    <Button 
+                        type="submit" 
+                        size="sm" 
+                        className="absolute right-2 top-2"
+                        disabled={searchMutation.isPending}
+                    >
+                        {searchMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+                    </Button>
+                </form>
+
+                {searchResults.length > 0 ? (
+                    <div className="space-y-4 pt-4 border-t">
+                        <h3 className="text-sm font-medium text-muted-foreground">Results</h3>
+                        {searchResults.map((result) => (
+                            <div key={result.chunkId} className="p-4 rounded-lg border bg-secondary/5 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="font-medium text-primary">{result.docTitle}</h4>
+                                    <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+                                        Score: {(result.score * 100).toFixed(0)}%
+                                    </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground line-clamp-3">
+                                    {result.textContent}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                        Try searching for "architecture", "api endpoints", or specific error codes.
+                    </p>
+                )}
              </CardContent>
           </Card>
         </TabsContent>

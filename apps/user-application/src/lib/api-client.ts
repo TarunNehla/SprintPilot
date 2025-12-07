@@ -2,8 +2,8 @@
 import { authClient } from "./auth-client";
 import type { 
   Project, CreateProjectInput, 
-  Document, CreateDocInput, 
-  Issue, CreateIssueInput 
+  Document, UpdateDocInput, DocumentWithContent,
+  Issue, CreateIssueInput, UpdateIssueInput, IssueWithDescription 
 } from "@repo/data-ops/zod-schema/projects";
 import type { RagQueryRequest, RagQueryResponse } from "@repo/data-ops/zod-schema/rag";
 
@@ -29,7 +29,8 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   const token = await getAuthToken();
   
   const headers = {
-    "Content-Type": "application/json",
+    // Only set JSON content-type if body is NOT FormData
+    ...(!(options.body instanceof FormData) && { "Content-Type": "application/json" }),
     ...(token ? { "Authorization": `Bearer ${token}` } : {}),
     ...options.headers,
   };
@@ -73,9 +74,29 @@ export const api = {
   getProjectDocs: (projectId: string) => 
     apiFetch<Document[]>(`/api/projects/${projectId}/docs`),
   
-  createDoc: (projectId: string, data: CreateDocInput) =>
-    apiFetch<Document>(`/api/projects/${projectId}/docs`, {
+  createDoc: (projectId: string, data: { file: File; title?: string; docType?: string }) => {
+    const formData = new FormData();
+    formData.append("file", data.file);
+    if (data.title) formData.append("title", data.title);
+    if (data.docType) formData.append("docType", data.docType);
+
+    return apiFetch<Document>(`/api/projects/${projectId}/docs`, {
       method: "POST",
+      body: formData,
+      // NOTE: When using FormData, let the browser set the Content-Type header with the boundary
+      // The apiFetch wrapper sets Content-Type to application/json by default, so we need to override it
+      headers: {
+          // Explicitly removing it so browser sets it
+      } as any
+    });
+  },
+
+  getDoc: (projectId: string, docId: string) =>
+    apiFetch<DocumentWithContent>(`/api/projects/${projectId}/docs/${docId}`),
+
+  updateDoc: (projectId: string, docId: string, data: UpdateDocInput) =>
+    apiFetch<Document>(`/api/projects/${projectId}/docs/${docId}`, {
+      method: "PUT",
       body: JSON.stringify(data),
     }),
 
@@ -86,6 +107,15 @@ export const api = {
   createIssue: (projectId: string, data: CreateIssueInput) =>
     apiFetch<Issue>(`/api/projects/${projectId}/issues`, {
       method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getIssue: (projectId: string, issueId: string) =>
+    apiFetch<IssueWithDescription>(`/api/projects/${projectId}/issues/${issueId}`),
+
+  updateIssue: (projectId: string, issueId: string, data: UpdateIssueInput) =>
+    apiFetch<Issue>(`/api/projects/${projectId}/issues/${issueId}`, {
+      method: "PUT",
       body: JSON.stringify(data),
     }),
 

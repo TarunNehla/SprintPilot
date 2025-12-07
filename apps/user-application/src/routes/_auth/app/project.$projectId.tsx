@@ -1,11 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { Loader2, Search, Folder, FileText, ListTodo, Bot } from "lucide-react";
+import { Loader2, Search, Folder, FileText, ListTodo, Bot, ChevronRight, Home } from "lucide-react";
 import { useState } from "react";
+import { UploadDocumentDialog } from "@/components/dashboard/upload-document-dialog";
+import { DocumentDetailsDialog } from "@/components/dashboard/document-details-dialog";
+import { CreateIssueDialog } from "@/components/dashboard/create-issue-dialog";
+import { IssueDetailsDialog } from "@/components/dashboard/issue-details-dialog";
 // ... (other imports)
 
 
@@ -34,6 +38,10 @@ function ProjectDetails() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]); 
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false);
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null); 
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null); 
 
   const searchMutation = useMutation({
       mutationFn: (query: string) => api.search({
@@ -66,6 +74,16 @@ function ProjectDetails() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-10">
+        {/* Breadcrumb */}
+        <nav className="flex items-center text-sm text-muted-foreground">
+            <Link to="/app" className="hover:text-foreground flex items-center gap-1 transition-colors">
+                <Home className="h-4 w-4" />
+                <span>Dashboard</span>
+            </Link>
+            <ChevronRight className="h-4 w-4 mx-2" />
+            <span className="font-medium text-foreground">{project.name}</span>
+        </nav>
+
       <div className="flex items-center justify-between border-b pb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
@@ -122,7 +140,7 @@ function ProjectDetails() {
                 <h2 className="text-xl font-semibold">Documents</h2>
                 <p className="text-sm text-muted-foreground">Manage your project knowledge base.</p>
              </div>
-             <Button>
+             <Button onClick={() => setIsUploadOpen(true)}>
                 <FileText className="mr-2 h-4 w-4" />
                 Upload Document
              </Button>
@@ -140,13 +158,17 @@ function ProjectDetails() {
                 <p className="text-muted-foreground max-w-sm mt-2 mb-6">
                     Upload documents to start building your project's knowledge base.
                 </p>
-                <Button variant="outline">Upload First Document</Button>
+                <Button variant="outline" onClick={() => setIsUploadOpen(true)}>Upload First Document</Button>
              </CardContent>
           </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {docs.map(doc => (
-                    <Card key={doc.id} className="cursor-pointer hover:border-primary transition-colors">
+                    <Card 
+                        key={doc.id} 
+                        className="cursor-pointer hover:border-primary transition-colors hover:shadow-md"
+                        onClick={() => setSelectedDocId(doc.id)}
+                    >
                         <CardContent className="p-6 space-y-2">
                              <div className="flex items-start justify-between">
                                 <FileText className="h-5 w-5 text-primary" />
@@ -178,7 +200,7 @@ function ProjectDetails() {
                 <h2 className="text-xl font-semibold">Issues</h2>
                 <p className="text-sm text-muted-foreground">Track and manage project tasks.</p>
              </div>
-             <Button>
+             <Button onClick={() => setIsCreateIssueOpen(true)}>
                 <ListTodo className="mr-2 h-4 w-4" />
                 Create Issue
              </Button>
@@ -196,13 +218,17 @@ function ProjectDetails() {
                 <p className="text-muted-foreground max-w-sm mt-2 mb-6">
                     Create issues to track tasks and bugs for this project.
                 </p>
-                <Button variant="outline">Create First Issue</Button>
+                <Button variant="outline" onClick={() => setIsCreateIssueOpen(true)}>Create First Issue</Button>
              </CardContent>
           </Card>
           ) : (
              <div className="space-y-4">
                 {issues.map(issue => (
-                    <Card key={issue.id} className="shadow-none border cursor-pointer hover:border-primary transition-colors">
+                    <Card 
+                        key={issue.id} 
+                        className="shadow-none border cursor-pointer hover:border-primary transition-colors hover:shadow-sm"
+                        onClick={() => setSelectedIssueId(issue.id)}
+                    >
                         <CardContent className="p-4 flex items-center justify-between">
                             <div className="space-y-1">
                                 <div className="flex items-center gap-2">
@@ -265,9 +291,13 @@ function ProjectDetails() {
                     <div className="space-y-4 pt-4 border-t">
                         <h3 className="text-sm font-medium text-muted-foreground">Results</h3>
                         {searchResults.map((result) => (
-                            <div key={result.chunkId} className="p-4 rounded-lg border bg-secondary/5 space-y-2">
+                            <div 
+                                key={result.chunkId} 
+                                className="p-4 rounded-lg border bg-secondary/5 space-y-2 cursor-pointer hover:bg-secondary/10 transition-colors"
+                                onClick={() => setSelectedDocId(result.docId)}
+                            >
                                 <div className="flex items-center justify-between">
-                                    <h4 className="font-medium text-primary">{result.docTitle}</h4>
+                                    <h4 className="font-medium text-primary hover:underline">{result.docTitle}</h4>
                                     <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
                                         Score: {(result.score * 100).toFixed(0)}%
                                     </span>
@@ -275,6 +305,7 @@ function ProjectDetails() {
                                 <p className="text-sm text-muted-foreground line-clamp-3">
                                     {result.textContent}
                                 </p>
+                                <p className="text-xs text-primary/70 mt-1">Click to view full document</p>
                             </div>
                         ))}
                     </div>
@@ -316,6 +347,32 @@ function ProjectDetails() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <UploadDocumentDialog 
+        projectId={projectId} 
+        open={isUploadOpen} 
+        onOpenChange={setIsUploadOpen} 
+      />
+
+      <DocumentDetailsDialog 
+        projectId={projectId} 
+        documentId={selectedDocId} 
+        open={!!selectedDocId} 
+        onOpenChange={(open) => !open && setSelectedDocId(null)} 
+      />
+
+      <CreateIssueDialog 
+        projectId={projectId} 
+        open={isCreateIssueOpen} 
+        onOpenChange={setIsCreateIssueOpen} 
+      />
+
+      <IssueDetailsDialog 
+        projectId={projectId} 
+        issueId={selectedIssueId} 
+        open={!!selectedIssueId} 
+        onOpenChange={(open) => !open && setSelectedIssueId(null)} 
+      />
     </div>
   );
 }

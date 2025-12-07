@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Folder, FileText, ListTodo, Search, Bot } from "lucide-react";
 
-export const Route = createFileRoute("/dashboard/projects/$projectId")({
+export const Route = createFileRoute("/_auth/app/project/$projectId")({
   component: ProjectDetails,
 });
 

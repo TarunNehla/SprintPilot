@@ -25,11 +25,7 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   { label: "Features", href: "/#features", scrollTo: "features" },
-  {
-    label: "Documentation",
-    href: "/docs",
-    isExternal: false,
-  },
+
   {
     label: "GitHub",
     href: "https://github.com/backpine/saas-kit",

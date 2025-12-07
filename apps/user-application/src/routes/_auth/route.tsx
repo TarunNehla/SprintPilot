@@ -1,5 +1,4 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { GoogleLogin } from "@/components/auth/google-login";
 import { authClient } from "@/lib/auth-client";
@@ -21,7 +20,6 @@ function RouteComponent() {
         </div>
       ) : session.data ? (
         <div className="flex h-screen bg-background overflow-hidden">
-          <Sidebar className="flex-shrink-0" />
           
           <div className="flex flex-1 flex-col overflow-hidden">
             <Header 

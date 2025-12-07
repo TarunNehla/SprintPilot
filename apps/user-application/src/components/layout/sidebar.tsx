@@ -16,7 +16,7 @@ const navigationItems: NavigationItem[] = [
   {
     name: "Dashboard",
     icon: Home,
-    href: "/dashboard",
+    href: "/app",
   },
 ];
 
@@ -61,7 +61,7 @@ export function Sidebar({ className }: SidebarProps) {
           <nav className="space-y-2">
             {navigationItems.map((item) => {
               const isActive = currentPath === item.href || 
-                (item.href !== "/dashboard" && currentPath.startsWith(item.href));
+                (item.href !== "/app" && currentPath.startsWith(item.href));
               
               return (
                 <Button

@@ -1,0 +1,6 @@
+POST http://localhost:8080/apps/my_agent/users/test-user/sessions
+Content-Type: application/json
+
+{
+  "session_id": "my-custom-session-id-123"
+}

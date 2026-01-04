@@ -1,11 +1,12 @@
 
 import { authClient } from "./auth-client";
-import type { 
-  Project, CreateProjectInput, 
+import type {
+  Project, CreateProjectInput,
   Document, UpdateDocInput, DocumentWithContent,
-  Issue, CreateIssueInput, UpdateIssueInput, IssueWithDescription 
+  Issue, CreateIssueInput, UpdateIssueInput, IssueWithDescription
 } from "@repo/data-ops/zod-schema/projects";
 import type { RagQueryRequest, RagQueryResponse } from "@repo/data-ops/zod-schema/rag";
+import type { AgentQuery, AgentResponse } from "@repo/data-ops/zod-schema/agent";
 
 // Aliases to match previous usage
 type RagQueryInput = RagQueryRequest;
@@ -122,6 +123,13 @@ export const api = {
   // Search
   search: (data: RagQueryInput) =>
     apiFetch<RagResponse>("/api/rag/query", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // Agent
+  queryAgent: (data: AgentQuery) =>
+    apiFetch<AgentResponse>("/api/agent/query", {
       method: "POST",
       body: JSON.stringify(data),
     }),

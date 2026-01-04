@@ -18,6 +18,7 @@ import {
 } from "@repo/data-ops/zod-schema/projects";
 import type { DocIndexingMessage } from "@repo/data-ops/zod-schema/queues";
 import { ragQuerySchema } from "@repo/data-ops/zod-schema/rag";
+import { agentQuerySchema } from "@repo/data-ops/zod-schema/agent";
 import {
   hybridSearch,
   logRagQuery,
@@ -45,11 +46,13 @@ function inferDocType(filename: string): string {
 
 
 
-export const app = new Hono<{ 
+export const app = new Hono<{
   Bindings: Env,
   Variables: {
     user: typeof auth_user.$inferSelect;
     session: typeof auth_session.$inferSelect;
+    agentRequest: boolean;
+    agentUserId: string;
   }
 }>();
 
@@ -86,7 +89,39 @@ const authMiddleware = async (c: any, next: any) => {
   return c.json({ error: "Unauthorized" }, 401);
 };
 
+// Agent Service Auth Middleware
+const agentServiceAuthMiddleware = async (c: any, next: any) => {
+  const secret = c.req.raw.headers.get("X-Agent-Secret");
 
+  if (!secret) {
+    return c.json({ error: "Missing agent secret" }, 401);
+  }
+
+  if (secret !== c.env.AGENT_SERVICE_SECRET) {
+    return c.json({ error: "Invalid agent secret" }, 403);
+  }
+
+  // Extract user context from agent request
+  const userId = c.req.raw.headers.get("X-User-Id");
+  c.set("agentRequest", true);
+  c.set("agentUserId", userId);
+
+  await next();
+};
+
+// Dual Auth Middleware (accepts both user and agent auth)
+const dualAuthMiddleware = async (c: any, next: any) => {
+  // Check for agent secret first
+  const agentSecret = c.req.raw.headers.get("X-Agent-Secret");
+
+  if (agentSecret) {
+    // Agent authentication path
+    return agentServiceAuthMiddleware(c, next);
+  }
+
+  // User authentication path
+  return authMiddleware(c, next);
+};
 
 // Auth Middleware
 
@@ -254,10 +289,13 @@ app.post("/api/projects", authMiddleware, async (c) => {
 });
 
 // GET /api/projects/:projectId - Get single project
-app.get("/api/projects/:projectId", authMiddleware, async (c) => {
+app.get("/api/projects/:projectId", dualAuthMiddleware, async (c) => {
   try {
     const db = getDb();
     const user = c.get("user");
+    const isAgent = c.get("agentRequest");
+    const agentUserId = c.get("agentUserId");
+    const effectiveUserId = isAgent ? agentUserId : user?.id;
 
     const projectId = c.req.param("projectId");
 
@@ -271,7 +309,7 @@ app.get("/api/projects/:projectId", authMiddleware, async (c) => {
       return c.json({ error: "Project not found" }, 404);
     }
 
-    if (project.ownerId !== user.id) {
+    if (project.ownerId !== effectiveUserId) {
        return c.json({ error: "Unauthorized" }, 403);
     }
 
@@ -431,11 +469,14 @@ app.post("/api/projects/:projectId/docs", authMiddleware, async (c) => {
 });
 
 // GET /api/projects/:projectId/docs/:docId - Get doc with content
-app.get("/api/projects/:projectId/docs/:docId", authMiddleware, async (c) => {
+app.get("/api/projects/:projectId/docs/:docId", dualAuthMiddleware, async (c) => {
   try {
     const db = getDb();
     const bucket = c.env.STORAGE;
     const user = c.get("user");
+    const isAgent = c.get("agentRequest");
+    const agentUserId = c.get("agentUserId");
+    const effectiveUserId = isAgent ? agentUserId : user?.id;
 
     const projectId = c.req.param("projectId");
     const docId = c.req.param("docId");
@@ -450,8 +491,8 @@ app.get("/api/projects/:projectId/docs/:docId", authMiddleware, async (c) => {
     if (!project) {
         return c.json({ error: "Project not found" }, 404);
     }
-    
-    if (project.ownerId !== user.id) {
+
+    if (project.ownerId !== effectiveUserId) {
         return c.json({ error: "Unauthorized" }, 403);
     }
 
@@ -485,10 +526,13 @@ app.get("/api/projects/:projectId/docs/:docId", authMiddleware, async (c) => {
 });
 
 // GET /api/projects/:projectId/docs - List all docs for project
-app.get("/api/projects/:projectId/docs", authMiddleware, async (c) => {
+app.get("/api/projects/:projectId/docs", dualAuthMiddleware, async (c) => {
   try {
     const db = getDb();
     const user = c.get("user");
+    const isAgent = c.get("agentRequest");
+    const agentUserId = c.get("agentUserId");
+    const effectiveUserId = isAgent ? agentUserId : user?.id;
 
     const projectId = c.req.param("projectId");
 
@@ -503,7 +547,7 @@ app.get("/api/projects/:projectId/docs", authMiddleware, async (c) => {
       return c.json({ error: "Project not found" }, 404);
     }
 
-    if (project.ownerId !== user.id) {
+    if (project.ownerId !== effectiveUserId) {
        return c.json({ error: "Unauthorized" }, 403);
     }
 
@@ -609,11 +653,14 @@ app.put("/api/projects/:projectId/docs/:docId", authMiddleware, async (c) => {
 // ===== ISSUE ROUTES =====
 
 // POST /api/projects/:projectId/issues - Create new issue
-app.post("/api/projects/:projectId/issues", authMiddleware, async (c) => {
+app.post("/api/projects/:projectId/issues", dualAuthMiddleware, async (c) => {
   try {
     const db = getDb();
     const bucket = c.env.STORAGE;
     const user = c.get("user");
+    const isAgent = c.get("agentRequest");
+    const agentUserId = c.get("agentUserId");
+    const effectiveUserId = isAgent ? agentUserId : user?.id;
 
     const projectId = c.req.param("projectId");
 
@@ -628,7 +675,7 @@ app.post("/api/projects/:projectId/issues", authMiddleware, async (c) => {
       return c.json({ error: "Project not found" }, 404);
     }
 
-    if (project.ownerId !== user.id) {
+    if (project.ownerId !== effectiveUserId) {
        return c.json({ error: "Unauthorized" }, 403);
     }
 
@@ -664,11 +711,14 @@ app.post("/api/projects/:projectId/issues", authMiddleware, async (c) => {
 });
 
 // GET /api/projects/:projectId/issues/:issueId - Get issue with description
-app.get("/api/projects/:projectId/issues/:issueId", authMiddleware, async (c) => {
+app.get("/api/projects/:projectId/issues/:issueId", dualAuthMiddleware, async (c) => {
   try {
     const db = getDb();
     const bucket = c.env.STORAGE;
     const user = c.get("user");
+    const isAgent = c.get("agentRequest");
+    const agentUserId = c.get("agentUserId");
+    const effectiveUserId = isAgent ? agentUserId : user?.id;
 
     const projectId = c.req.param("projectId");
     const issueId = c.req.param("issueId");
@@ -683,8 +733,8 @@ app.get("/api/projects/:projectId/issues/:issueId", authMiddleware, async (c) =>
     if (!project) {
         return c.json({ error: "Project not found" }, 404);
     }
-    
-    if (project.ownerId !== user.id) {
+
+    if (project.ownerId !== effectiveUserId) {
         return c.json({ error: "Unauthorized" }, 403);
     }
 
@@ -718,10 +768,13 @@ app.get("/api/projects/:projectId/issues/:issueId", authMiddleware, async (c) =>
 });
 
 // GET /api/projects/:projectId/issues - List all issues for project
-app.get("/api/projects/:projectId/issues", authMiddleware, async (c) => {
+app.get("/api/projects/:projectId/issues", dualAuthMiddleware, async (c) => {
   try {
     const db = getDb();
     const user = c.get("user");
+    const isAgent = c.get("agentRequest");
+    const agentUserId = c.get("agentUserId");
+    const effectiveUserId = isAgent ? agentUserId : user?.id;
 
     const projectId = c.req.param("projectId");
 
@@ -736,7 +789,7 @@ app.get("/api/projects/:projectId/issues", authMiddleware, async (c) => {
       return c.json({ error: "Project not found" }, 404);
     }
 
-    if (project.ownerId !== user.id) {
+    if (project.ownerId !== effectiveUserId) {
        return c.json({ error: "Unauthorized" }, 403);
     }
 
@@ -752,11 +805,14 @@ app.get("/api/projects/:projectId/issues", authMiddleware, async (c) => {
 });
 
 // PUT /api/projects/:projectId/issues/:issueId - Update issue
-app.put("/api/projects/:projectId/issues/:issueId", authMiddleware, async (c) => {
+app.put("/api/projects/:projectId/issues/:issueId", dualAuthMiddleware, async (c) => {
   try {
     const db = getDb();
     const bucket = c.env.STORAGE;
     const user = c.get("user");
+    const isAgent = c.get("agentRequest");
+    const agentUserId = c.get("agentUserId");
+    const effectiveUserId = isAgent ? agentUserId : user?.id;
 
     const projectId = c.req.param("projectId");
     const issueId = c.req.param("issueId");
@@ -771,8 +827,8 @@ app.put("/api/projects/:projectId/issues/:issueId", authMiddleware, async (c) =>
     if (!project) {
         return c.json({ error: "Project not found" }, 404);
     }
-    
-    if (project.ownerId !== user.id) {
+
+    if (project.ownerId !== effectiveUserId) {
         return c.json({ error: "Unauthorized" }, 403);
     }
 
@@ -831,12 +887,15 @@ app.put("/api/projects/:projectId/issues/:issueId", authMiddleware, async (c) =>
 // ===== RAG ROUTES =====
 
 // POST /api/rag/query - Query project knowledge base with hybrid search
-app.post("/api/rag/query", authMiddleware, async (c) => {
+app.post("/api/rag/query", dualAuthMiddleware, async (c) => {
   const startTime = Date.now();
 
   try {
     const db = getDb();
     const user = c.get("user");
+    const isAgent = c.get("agentRequest");
+    const agentUserId = c.get("agentUserId");
+    const effectiveUserId = isAgent ? agentUserId : user?.id;
     const body = ragQuerySchema.parse(await c.req.json());
     const { projectId, query, filters, config } = body;
 
@@ -851,7 +910,7 @@ app.post("/api/rag/query", authMiddleware, async (c) => {
       return c.json({ error: "Project not found" }, 404);
     }
 
-    if (project.ownerId !== user.id) {
+    if (project.ownerId !== effectiveUserId) {
        return c.json({ error: "Unauthorized" }, 403);
     }
 
@@ -921,6 +980,64 @@ app.get("/api/rag/analytics/:projectId", authMiddleware, async (c) => {
 
     return c.json(analytics);
   } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// ===== AGENT SERVICE ROUTES =====
+
+// POST /api/agent/query - Proxy to agent service
+app.post("/api/agent/query", authMiddleware, async (c) => {
+  try {
+    const db = getDb();
+    const user = c.get("user");
+    const body = agentQuerySchema.parse(await c.req.json());
+
+    // Verify project ownership
+    const [project] = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, body.projectId))
+      .limit(1);
+
+    if (!project) {
+      return c.json({ error: "Project not found" }, 404);
+    }
+
+    if (project.ownerId !== user.id) {
+      return c.json({ error: "Unauthorized" }, 403);
+    }
+
+    // Call agent service
+    const agentResponse = await fetch(`${c.env.AGENT_SERVICE_URL}/api/query`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Backend-Secret": c.env.AGENT_SERVICE_SECRET,
+      },
+      body: JSON.stringify({
+        project_id: body.projectId,
+        query: body.query,
+        user_id: user.id,
+      }),
+    });
+
+    if (!agentResponse.ok) {
+      const errorText = await agentResponse.text();
+      return c.json(
+        {
+          error: "Agent service error",
+          details: errorText,
+        },
+        agentResponse.status as any
+      );
+    }
+
+    return c.json(await agentResponse.json());
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return c.json({ error: "Invalid request", details: error.errors }, 400);
+    }
     return c.json({ error: String(error) }, 500);
   }
 });

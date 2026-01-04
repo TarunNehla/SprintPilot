@@ -4,9 +4,16 @@
       "Bash(cat:*)",
       "Bash(pnpm run build)",
       "WebSearch",
-      "Bash(pnpm run build:data-ops:*)"
+      "Bash(pnpm run build:data-ops:*)",
+      "mcp__context7__get-library-docs",
+      "Bash(python:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7"
+  ]
 }

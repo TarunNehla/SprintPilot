@@ -1,0 +1,8 @@
+POST http://localhost:8080/api/query
+Content-Type: application/json
+
+{
+  "session_id": "my-custom-session-id-123",
+  "message": "hey there",
+  "user_id": "test-user"
+}

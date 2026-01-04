@@ -2,15 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { Loader2, Search, Folder, FileText, ListTodo, Bot, ChevronRight, Home } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Search, Folder, FileText, ListTodo, Bot, ChevronRight, Home, Send, User } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { UploadDocumentDialog } from "@/components/dashboard/upload-document-dialog";
 import { DocumentDetailsDialog } from "@/components/dashboard/document-details-dialog";
 import { CreateIssueDialog } from "@/components/dashboard/create-issue-dialog";
 import { IssueDetailsDialog } from "@/components/dashboard/issue-details-dialog";
-// ... (other imports)
+import type { AgentResponse } from "@repo/data-ops/zod-schema/agent";
 
 
 
@@ -41,7 +42,16 @@ function ProjectDetails() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null); 
-  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null); 
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
+  
+  // Agent chat state
+  const [agentQuery, setAgentQuery] = useState("");
+  const [chatMessages, setChatMessages] = useState<Array<{
+    role: "user" | "assistant";
+    content: string;
+    sources?: AgentResponse["sources"];
+  }>>([]);
+  const chatScrollRef = useRef<HTMLDivElement>(null); 
 
   const searchMutation = useMutation({
       mutationFn: (query: string) => api.search({
@@ -59,6 +69,35 @@ function ProjectDetails() {
       if (!searchQuery.trim()) return;
       searchMutation.mutate(searchQuery);
   }
+
+  // Agent query mutation
+  const agentMutation = useMutation({
+      mutationFn: (query: string) => api.queryAgent({ projectId, query }),
+      onSuccess: (data) => {
+          setChatMessages(prev => [...prev, {
+              role: "assistant",
+              content: data.answer,
+              sources: data.sources
+          }]);
+      }
+  });
+
+  const handleAgentQuery = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!agentQuery.trim() || agentMutation.isPending) return;
+      
+      // Add user message
+      setChatMessages(prev => [...prev, { role: "user", content: agentQuery }]);
+      
+      // Query agent
+      agentMutation.mutate(agentQuery);
+      setAgentQuery("");
+  };
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+      chatScrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   if (isProjectLoading) {
       return (
@@ -326,23 +365,92 @@ function ProjectDetails() {
              </div>
           </div>
            <Card className="shadow-none h-[600px] flex flex-col">
-             <CardContent className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                <div className="rounded-full bg-primary/10 p-6 mb-6">
-                    <Bot className="h-12 w-12 text-primary" />
-                </div>
-                <h3 className="font-semibold text-2xl">How can I help you?</h3>
-                <p className="text-muted-foreground max-w-md mt-4">
-                    I have access to all your project documents and issues. Ask me anything about the project status, requirements, or code structure.
-                </p>
+             <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
+                {chatMessages.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                        <div className="rounded-full bg-primary/10 p-6 mb-6">
+                            <Bot className="h-12 w-12 text-primary" />
+                        </div>
+                        <h3 className="font-semibold text-2xl">How can I help you?</h3>
+                        <p className="text-muted-foreground max-w-md mt-4">
+                            I have access to all your project documents and issues. Ask me anything about the project status, requirements, or code structure.
+                        </p>
+                    </div>
+                ) : (
+                    <ScrollArea className="flex-1 p-6">
+                        <div className="space-y-6">
+                            {chatMessages.map((msg, idx) => (
+                                <div key={idx} className={`flex gap-4 ${msg.role === "user" ? "justify-end" : ""}`}>
+                                    {msg.role === "assistant" && (
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <Bot className="h-5 w-5 text-primary" />
+                                        </div>
+                                    )}
+                                    <div className={`flex flex-col gap-2 max-w-[80%] ${msg.role === "user" ? "items-end" : ""}`}>
+                                        <div className={`rounded-lg px-4 py-3 ${
+                                            msg.role === "user" 
+                                                ? "bg-primary text-primary-foreground" 
+                                                : "bg-muted"
+                                        }`}>
+                                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                        </div>
+                                        {msg.sources && msg.sources.length > 0 && (
+                                            <div className="space-y-1 w-full">
+                                                <p className="text-xs font-medium text-muted-foreground">Sources:</p>
+                                                {msg.sources.map((source, sIdx) => (
+                                                    <button
+                                                        key={sIdx}
+                                                        onClick={() => {
+                                                            if (source.type === "doc") {
+                                                                setSelectedDocId(source.id);
+                                                            } else {
+                                                                setSelectedIssueId(source.id);
+                                                            }
+                                                        }}
+                                                        className="flex items-center gap-2 text-xs text-primary hover:underline bg-background border rounded px-2 py-1"
+                                                    >
+                                                        {source.type === "doc" ? <FileText className="h-3 w-3" /> : <ListTodo className="h-3 w-3" />}
+                                                        <span>{source.title}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {msg.role === "user" && (
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                                            <User className="h-5 w-5 text-muted-foreground" />
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                            {agentMutation.isPending && (
+                                <div className="flex gap-4">
+                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <Bot className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div className="bg-muted rounded-lg px-4 py-3">
+                                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={chatScrollRef} />
+                        </div>
+                    </ScrollArea>
+                )}
              </CardContent>
              <div className="p-4 border-t bg-muted/20">
-                <div className="flex gap-2">
+                <form onSubmit={handleAgentQuery} className="flex gap-2">
                     <input 
-                        className="flex-1 h-10 px-4 rounded-md border bg-background"
+                        value={agentQuery}
+                        onChange={(e) => setAgentQuery(e.target.value)}
+                        className="flex-1 h-10 px-4 rounded-md border bg-background ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         placeholder="Ask a question..."
+                        disabled={agentMutation.isPending}
                     />
-                    <Button>Send</Button>
-                </div>
+                    <Button type="submit" disabled={agentMutation.isPending || !agentQuery.trim()}>
+                        {agentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
+                </form>
              </div>
           </Card>
         </TabsContent>

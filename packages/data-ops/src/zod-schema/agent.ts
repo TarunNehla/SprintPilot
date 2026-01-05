@@ -8,7 +8,8 @@ export const agentQuerySchema = z.object({
 
 // Agent Service response
 export const agentResponseSchema = z.object({
-  answer: z.string(),
+  answer: z.string().optional(),
+  response: z.string().optional(),
   sources: z.array(z.object({
     type: z.enum(["doc", "issue"]),
     id: z.string(),

@@ -30,6 +30,14 @@ class QueryRequest(BaseModel):
     user_id: str = "default-user"
 
 
+@app.get("/debug")
+async def debug():
+    return {
+        "state_keys": dir(app.state),
+        "routes": [route.path for route in app.routes]
+    }
+
+
 @app.post("/api/query")
 async def query_agent(query: QueryRequest):
     """

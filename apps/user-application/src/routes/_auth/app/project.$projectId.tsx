@@ -12,6 +12,9 @@ import { DocumentDetailsDialog } from "@/components/dashboard/document-details-d
 import { CreateIssueDialog } from "@/components/dashboard/create-issue-dialog";
 import { IssueDetailsDialog } from "@/components/dashboard/issue-details-dialog";
 import type { AgentResponse } from "@repo/data-ops/zod-schema/agent";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 
 
 
@@ -76,7 +79,7 @@ function ProjectDetails() {
       onSuccess: (data) => {
           setChatMessages(prev => [...prev, {
               role: "assistant",
-              content: data.answer,
+              content: data.answer || data.response || "",
               sources: data.sources
           }]);
       }
@@ -392,7 +395,17 @@ function ProjectDetails() {
                                                 ? "bg-primary text-primary-foreground" 
                                                 : "bg-muted"
                                         }`}>
-                                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                            {msg.role === "assistant" ? (
+                                                <div className="prose prose-sm dark:prose-invert max-w-none">
+                                                    <ReactMarkdown 
+                                                        remarkPlugins={[remarkGfm, remarkBreaks]}
+                                                    >
+                                                        {msg.content}
+                                                    </ReactMarkdown>
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                            )}
                                         </div>
                                         {msg.sources && msg.sources.length > 0 && (
                                             <div className="space-y-1 w-full">

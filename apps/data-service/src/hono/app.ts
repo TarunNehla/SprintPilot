@@ -1008,17 +1008,43 @@ app.post("/api/agent/query", authMiddleware, async (c) => {
       return c.json({ error: "Unauthorized" }, 403);
     }
 
-    // Call agent service
-    const agentResponse = await fetch(`${c.env.AGENT_SERVICE_URL}/api/query`, {
+    const sessionId = `${body.projectId}-${user.id}`;
+    const agentBaseUrl = c.env.AGENT_SERVICE_URL;
+
+    // Ensure session exists (create if not)
+    const sessionUrl = `${agentBaseUrl}/apps/my_agent/users/${user.id}/sessions/${sessionId}`;
+    const sessionCheck = await fetch(sessionUrl);
+    
+    if (!sessionCheck.ok) {
+      // Session doesn't exist, create it
+      const createSessionUrl = `${agentBaseUrl}/apps/my_agent/users/${user.id}/sessions`;
+      const createRes = await fetch(createSessionUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      
+      if (!createRes.ok) {
+        const errText = await createRes.text();
+        return c.json({ error: "Failed to create session", details: errText }, 500);
+      }
+    }
+
+    // Now send the message
+    const agentResponse = await fetch(`${agentBaseUrl}/run_sse`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Backend-Secret": c.env.AGENT_SERVICE_SECRET,
       },
       body: JSON.stringify({
-        project_id: body.projectId,
-        query: body.query,
+        app_name: "my_agent",
         user_id: user.id,
+        session_id: sessionId,
+        new_message: {
+          role: "user",
+          parts: [{ text: body.query }],
+        },
       }),
     });
 
@@ -1033,7 +1059,28 @@ app.post("/api/agent/query", authMiddleware, async (c) => {
       );
     }
 
-    return c.json(await agentResponse.json());
+    // Parse SSE response to extract final text
+    const sseText = await agentResponse.text();
+    const events = sseText.split("\n\n").filter(Boolean);
+    let finalResponse = "";
+    
+    for (const event of events) {
+      if (event.startsWith("data: ")) {
+        try {
+          const data = JSON.parse(event.slice(6));
+          // Extract text from agent response events
+          if (data.content?.parts) {
+            for (const part of data.content.parts) {
+              if (part.text) finalResponse += part.text;
+            }
+          }
+        } catch {
+          // Skip non-JSON events
+        }
+      }
+    }
+
+    return c.json({ response: finalResponse || "No response from agent" });
   } catch (error: any) {
     if (error.name === "ZodError") {
       return c.json({ error: "Invalid request", details: error.errors }, 400);

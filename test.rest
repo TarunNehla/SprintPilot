@@ -1,8 +1,28 @@
-POST http://localhost:8080/api/query
+### Step 1: Create session with custom ID
+POST http://localhost:8080/apps/my_agent/users/test-user/sessions
 Content-Type: application/json
 
 {
-  "session_id": "my-custom-session-id-123",
-  "message": "hey there",
-  "user_id": "test-user"
+  "session_id": "my-session-123"
 }
+
+###
+
+### Step 2: Send message to agent
+POST http://localhost:8080/run_sse
+Content-Type: application/json
+
+{
+  "app_name": "my_agent",
+  "user_id": "test-user",
+  "session_id": "my-session-123",
+  "new_message": {
+    "role": "user",
+    "parts": [{"text": "hey there"}]
+  }
+}
+
+###
+
+### List all sessions for user
+GET http://localhost:8080/apps/my_agent/users/test-user/sessions

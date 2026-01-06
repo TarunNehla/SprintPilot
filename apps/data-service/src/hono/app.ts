@@ -97,7 +97,7 @@ const agentServiceAuthMiddleware = async (c: any, next: any) => {
     return c.json({ error: "Missing agent secret" }, 401);
   }
 
-  if (secret !== c.env.AGENT_SERVICE_SECRET) {
+  if (secret.trim() !== c.env.AGENT_SERVICE_SECRET.trim()) {
     return c.json({ error: "Invalid agent secret" }, 403);
   }
 
@@ -320,15 +320,18 @@ app.get("/api/projects/:projectId", dualAuthMiddleware, async (c) => {
 });
 
 // GET /api/projects - List all projects for owner
-app.get("/api/projects", authMiddleware, async (c) => {
+app.get("/api/projects", dualAuthMiddleware, async (c) => {
   try {
     const db = getDb();
     const user = c.get("user");
+    const isAgent = c.get("agentRequest");
+    const agentUserId = c.get("agentUserId");
+    const effectiveUserId = isAgent ? agentUserId : user?.id;
 
     const projectList = await db
       .select()
       .from(projects)
-      .where(eq(projects.ownerId, user.id));
+      .where(eq(projects.ownerId, effectiveUserId));
 
     return c.json(projectList);
   } catch (error) {
@@ -1035,7 +1038,7 @@ app.post("/api/agent/query", authMiddleware, async (c) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Backend-Secret": c.env.AGENT_SERVICE_SECRET,
+        "X-Backend-Secret": c.env.AGENT_SERVICE_SECRET.trim(),
       },
       body: JSON.stringify({
         app_name: "my_agent",

@@ -1,0 +1,61 @@
+### Base URLs
+# @dataServiceUrl = http://localhost:8787
+@dataServiceUrl = https://project-copilot-data-service.tarundhillon14330.workers.dev
+@agentServiceUrl = http://localhost:8080
+
+### Variables (Update these from your .env files)
+@agentSecret = Wfmv2Ro8xBQJNuTpGxfn1eCbGkRHuyVKsU4EVNk7Bko=
+@userId = 8DmS1YCNa4rpnPFoU521iAxzlt7I4iZe
+@projectId = cbdb4743-d375-4458-b7ef-0cb47bc02963
+
+##################################################################
+# DATA SERVICE DIRECT TESTS (VIA AGENT AUTH)
+##################################################################
+
+### 1. Simple Health Check
+GET {{dataServiceUrl}}/
+
+### 2. List Projects (Requires X-Agent-Secret)
+GET {{dataServiceUrl}}/api/projects
+X-Agent-Secret: {{agentSecret}}
+X-User-Id: {{userId}}
+
+### 3. RAG Query (Test connectivity + Vector Search)
+POST {{dataServiceUrl}}/api/rag/query
+Content-Type: application/json
+X-Agent-Secret: {{agentSecret}}
+X-User-Id: {{userId}}
+
+{
+  "projectId": "{{projectId}}",
+  "query": "system architecture",
+  "config": {
+    "hybridWeight": 0.5,
+    "limit": 3
+  }
+}
+
+##################################################################
+# ADK AGENT SERVICE TESTS
+##################################################################
+
+### 4. Agent Service Debug
+GET {{agentServiceUrl}}/debug
+
+### 5. Custom Query Endpoint
+POST {{agentServiceUrl}}/api/query
+Content-Type: application/json
+
+{
+  "session_id": "test-session-123",
+  "message": "What can you tell me about the project logs?",
+  "user_id": "{{userId}}"
+}
+
+### 6. ADK Sessions Endpoint (Built-in)
+POST {{agentServiceUrl}}/apps/my_agent/users/{{userId}}/sessions
+Content-Type: application/json
+
+{
+  "session_id": "adk-session-456"
+}

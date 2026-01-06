@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_BASE = os.getenv("API_BASE_URL", "http://localhost:8787")
-AGENT_SERVICE_SECRET = os.getenv("AGENT_SERVICE_SECRET", "")
+AGENT_SERVICE_SECRET = os.getenv("AGENT_SERVICE_SECRET", "").strip()
 # Hardcoded ownerId from docs for MVP
 OWNER_ID = "8DmS1YCNa4rpnPFoU521iAxzlt7I4iZe"
 PROJECT_ID_DEFAULT = "cbdb4743-d375-4458-b7ef-0cb47bc02963"
@@ -13,7 +13,8 @@ PROJECT_ID_DEFAULT = "cbdb4743-d375-4458-b7ef-0cb47bc02963"
 def _get_headers():
     return {
         "Content-Type": "application/json",
-        "X-Agent-Secret": AGENT_SERVICE_SECRET
+        "X-Agent-Secret": AGENT_SERVICE_SECRET,
+        "X-User-Id": OWNER_ID
     }
 
 def search_project_knowledge(project_id: str = PROJECT_ID_DEFAULT, query: str = None, doc_types=None, limit=10):

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { Loader2, Search, Folder, FileText, ListTodo, Bot, ChevronRight, Home, Send, User } from "lucide-react";
+import { Loader2, Search, Folder, FileText, ListTodo, Bot, ChevronRight, Home, Send, User, Trash2, Sparkles, Wand2, Copy, Check } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { UploadDocumentDialog } from "@/components/dashboard/upload-document-dialog";
 import { DocumentDetailsDialog } from "@/components/dashboard/document-details-dialog";
@@ -15,6 +15,8 @@ import type { AgentResponse } from "@repo/data-ops/zod-schema/agent";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 
 
@@ -66,6 +68,12 @@ function ProjectDetails() {
           setSearchResults(data.results);
       }
   });
+
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  const clearChat = () => {
+    setChatMessages([]);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
       e.preventDefault();
@@ -360,112 +368,237 @@ function ProjectDetails() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="agent" className="space-y-6 animate-in fade-in-50 slide-in-from-bottom-2">
-          <div className="flex justify-between items-center">
-             <div>
-                <h2 className="text-xl font-semibold">AI Assistant</h2>
-                <p className="text-sm text-muted-foreground">Chat with your project agent.</p>
-             </div>
-          </div>
-           <Card className="shadow-none h-[600px] flex flex-col">
-             <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
-                {chatMessages.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                        <div className="rounded-full bg-primary/10 p-6 mb-6">
-                            <Bot className="h-12 w-12 text-primary" />
+        <TabsContent value="agent" className="mt-0 h-[calc(100vh-280px)] min-h-[650px] animate-in fade-in-50 slide-in-from-bottom-2">
+            <div className="flex flex-col h-full bg-background border rounded-3xl overflow-hidden shadow-2xl shadow-primary/5 transition-all duration-300 relative">
+                {/* Decorative background elements */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+                    <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+                </div>
+
+                {/* Chat Header */}
+                <div className="px-8 py-5 border-b bg-background/80 backdrop-blur-xl flex items-center justify-between sticky top-0 z-10">
+                    <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 ring-4 ring-primary/10">
+                            <Bot className="h-7 w-7 text-primary-foreground" />
                         </div>
-                        <h3 className="font-semibold text-2xl">How can I help you?</h3>
-                        <p className="text-muted-foreground max-w-md mt-4">
-                            I have access to all your project documents and issues. Ask me anything about the project status, requirements, or code structure.
-                        </p>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-base font-bold tracking-tight">Project Intelligence</h2>
+                                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-none">
+                                    Live
+                                </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground font-medium">Always learning from your project docs</p>
+                        </div>
                     </div>
-                ) : (
-                    <ScrollArea className="flex-1 p-6">
-                        <div className="space-y-6">
-                            {chatMessages.map((msg, idx) => (
-                                <div key={idx} className={`flex gap-4 ${msg.role === "user" ? "justify-end" : ""}`}>
-                                    {msg.role === "assistant" && (
-                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                            <Bot className="h-5 w-5 text-primary" />
+                    {chatMessages.length > 0 && (
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={clearChat}
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                        >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Clear chat
+                        </Button>
+                    )}
+                </div>
+
+                {/* Messages Area */}
+                <div className="flex-1 relative overflow-hidden">
+                    <ScrollArea className="h-full" ref={chatScrollRef as any}>
+                        <div className="max-w-4xl mx-auto space-y-12 px-6 py-10">
+                            {chatMessages.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center text-center py-12 px-6 animate-in fade-in zoom-in duration-700">
+                                    <div className="relative mb-10">
+                                        <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+                                        <div className="relative w-24 h-24 rounded-[2.5rem] bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-2xl rotate-6 group hover:rotate-0 transition-transform duration-500">
+                                            <Sparkles className="h-12 w-12 text-primary-foreground" />
                                         </div>
-                                    )}
-                                    <div className={`flex flex-col gap-2 max-w-[80%] ${msg.role === "user" ? "items-end" : ""}`}>
-                                        <div className={`rounded-lg px-4 py-3 ${
-                                            msg.role === "user" 
-                                                ? "bg-primary text-primary-foreground" 
-                                                : "bg-muted"
-                                        }`}>
-                                            {msg.role === "assistant" ? (
-                                                <div className="prose prose-sm dark:prose-invert max-w-none">
-                                                    <ReactMarkdown 
-                                                        remarkPlugins={[remarkGfm, remarkBreaks]}
-                                                    >
-                                                        {msg.content}
-                                                    </ReactMarkdown>
+                                    </div>
+                                    
+                                    <h3 className="text-3xl font-black tracking-tighter mb-4">
+                                        How can I help you <span className="text-primary italic">today?</span>
+                                    </h3>
+                                    <p className="text-base text-muted-foreground max-w-md leading-relaxed font-medium mb-12">
+                                        I've indexed all your project documents and issues. Ask me anything about the codebase or requirements.
+                                    </p>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
+                                        {[
+                                            { label: "Architecture Overview", icon: <Bot className="h-4 w-4" />, query: "Summarize architectural decisions" },
+                                            { label: "Pending Issues", icon: <ListTodo className="h-4 w-4" />, query: "Analyze pending critical issues" },
+                                            { label: "API Requirements", icon: <Wand2 className="h-4 w-4" />, query: "Extract API requirements" },
+                                            { label: "Design Context", icon: <FileText className="h-4 w-4" />, query: "Find relevant design docs" }
+                                        ].map((item) => (
+                                            <button 
+                                                key={item.label}
+                                                onClick={() => {
+                                                    setAgentQuery(item.query);
+                                                    // Optional: auto-submit
+                                                }}
+                                                className="group flex flex-col items-start p-5 text-left bg-card border border-border/50 rounded-3xl hover:border-primary hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
+                                            >
+                                                <div className="p-2 rounded-xl bg-secondary group-hover:bg-primary group-hover:text-primary-foreground transition-colors mb-4">
+                                                    {item.icon}
                                                 </div>
-                                            ) : (
-                                                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                                            )}
-                                        </div>
-                                        {msg.sources && msg.sources.length > 0 && (
-                                            <div className="space-y-1 w-full">
-                                                <p className="text-xs font-medium text-muted-foreground">Sources:</p>
-                                                {msg.sources.map((source, sIdx) => (
-                                                    <button
-                                                        key={sIdx}
-                                                        onClick={() => {
-                                                            if (source.type === "doc") {
-                                                                setSelectedDocId(source.id);
-                                                            } else {
-                                                                setSelectedIssueId(source.id);
-                                                            }
-                                                        }}
-                                                        className="flex items-center gap-2 text-xs text-primary hover:underline bg-background border rounded px-2 py-1"
-                                                    >
-                                                        {source.type === "doc" ? <FileText className="h-3 w-3" /> : <ListTodo className="h-3 w-3" />}
-                                                        <span>{source.title}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
+                                                <span className="text-sm font-bold block mb-1">{item.label}</span>
+                                                <span className="text-xs text-muted-foreground line-clamp-1">{item.query}</span>
+                                            </button>
+                                        ))}
                                     </div>
-                                    {msg.role === "user" && (
-                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                            <User className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                            ) : (
+                                <>
+                                    {chatMessages.map((msg, idx) => (
+                                        <div 
+                                            key={idx} 
+                                            className={cn(
+                                                "flex gap-6 animate-in slide-in-from-bottom-6 duration-500",
+                                                msg.role === "user" ? "flex-row-reverse" : "flex-row"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg border-2 overflow-hidden transition-transform hover:scale-105",
+                                                msg.role === "assistant" 
+                                                    ? "bg-primary text-primary-foreground border-primary/10 rotate-3" 
+                                                    : "bg-background text-foreground border-border -rotate-3"
+                                            )}>
+                                                {msg.role === "assistant" ? <Bot className="h-6 w-6" /> : <User className="h-6 w-6" />}
+                                            </div>
+
+                                            <div className={cn(
+                                                "flex flex-col gap-4 max-w-[85%] group",
+                                                msg.role === "user" ? "items-end" : "items-start"
+                                            )}>
+                                                <div className="relative group/bubble">
+                                                    <div className={cn(
+                                                        "rounded-[2.5rem] px-8 py-6 shadow-sm border transition-all duration-300",
+                                                        msg.role === "user" 
+                                                            ? "bg-primary text-primary-foreground border-primary/20 rounded-tr-none hover:shadow-primary/20 hover:scale-[1.01]" 
+                                                            : "bg-background/95 backdrop-blur-md text-foreground border-border/60 rounded-tl-none hover:shadow-xl hover:border-primary/30 hover:scale-[1.01]"
+                                                    )}>
+                                                        {msg.role === "assistant" ? (
+                                                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-p:leading-relaxed prose-pre:bg-zinc-950 prose-pre:text-zinc-300 prose-pre:border prose-pre:border-white/10 prose-headings:font-black prose-headings:tracking-tighter prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-lg prose-code:before:content-none prose-code:after:content-none prose-code:font-bold">
+                                                                <ReactMarkdown 
+                                                                    remarkPlugins={[remarkGfm, remarkBreaks]}
+                                                                >
+                                                                    {msg.content}
+                                                                </ReactMarkdown>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-[0.95rem] font-semibold leading-relaxed tracking-tight">{msg.content}</p>
+                                                        )}
+                                                    </div>
+
+                                                    {msg.role === "assistant" && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="absolute -right-12 top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity h-8 w-8 rounded-xl bg-background border shadow-sm"
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText(msg.content);
+                                                                setCopiedIndex(idx);
+                                                                setTimeout(() => setCopiedIndex(null), 2000);
+                                                            }}
+                                                        >
+                                                            {copiedIndex === idx ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                                        </Button>
+                                                    )}
+                                                </div>
+
+                                                {msg.sources && msg.sources.length > 0 && (
+                                                    <div className="w-full">
+                                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 mb-3 px-2">Sources Found</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {msg.sources.map((source, sIdx) => (
+                                                                <button
+                                                                    key={sIdx}
+                                                                    onClick={() => {
+                                                                        if (source.type === "doc") setSelectedDocId(source.id);
+                                                                        else setSelectedIssueId(source.id);
+                                                                    }}
+                                                                    className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-secondary/50 hover:bg-primary/10 border border-border/50 hover:border-primary/30 text-[11px] font-bold transition-all group/source"
+                                                                >
+                                                                    {source.type === 'doc' ? <FileText className="h-3.5 w-3.5 text-primary" /> : <ListTodo className="h-3.5 w-3.5 text-primary" />}
+                                                                    <span className="text-muted-foreground group-hover/source:text-primary truncate max-w-[150px]">{source.title}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {agentMutation.isPending && (
+                                        <div className="flex gap-6 animate-pulse">
+                                            <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-primary/10 border-2 border-primary/10 flex items-center justify-center rotate-3">
+                                                <Bot className="h-6 w-6 text-primary" />
+                                            </div>
+                                            <div className="bg-card border border-border/60 rounded-[2.5rem] rounded-tl-none px-8 py-6 shadow-sm flex items-center gap-3">
+                                                <div className="flex gap-1.5">
+                                                    <span className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                                    <span className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                                    <span className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                                                </div>
+                                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-2">Thinking</span>
+                                            </div>
                                         </div>
                                     )}
-                                </div>
-                            ))}
-                            {agentMutation.isPending && (
-                                <div className="flex gap-4">
-                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                        <Bot className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <div className="bg-muted rounded-lg px-4 py-3">
-                                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                    </div>
-                                </div>
+                                </>
                             )}
-                            <div ref={chatScrollRef} />
+                            <div ref={chatScrollRef} className="h-4" />
                         </div>
                     </ScrollArea>
-                )}
-             </CardContent>
-             <div className="p-4 border-t bg-muted/20">
-                <form onSubmit={handleAgentQuery} className="flex gap-2">
-                    <input 
-                        value={agentQuery}
-                        onChange={(e) => setAgentQuery(e.target.value)}
-                        className="flex-1 h-10 px-4 rounded-md border bg-background ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        placeholder="Ask a question..."
-                        disabled={agentMutation.isPending}
-                    />
-                    <Button type="submit" disabled={agentMutation.isPending || !agentQuery.trim()}>
-                        {agentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    </Button>
-                </form>
-             </div>
-          </Card>
+                </div>
+
+                {/* Input Area */}
+                <div className="p-8 border-t bg-background/80 backdrop-blur-xl sticky bottom-0 z-10">
+                    <form 
+                        onSubmit={handleAgentQuery} 
+                        className="max-w-4xl mx-auto"
+                    >
+                        <div className="relative group p-1 rounded-[2rem] bg-gradient-to-br from-border/50 to-border/20 focus-within:from-primary/20 focus-within:to-primary/5 transition-all duration-500">
+                            <div className="relative flex items-end gap-3 bg-background rounded-[1.85rem] p-2 pr-3 border border-border/50 shadow-inner group-focus-within:border-primary/50 group-focus-within:shadow-2xl group-focus-within:shadow-primary/10 transition-all duration-500">
+                                <textarea 
+                                    value={agentQuery}
+                                    onChange={(e) => setAgentQuery(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleAgentQuery(e as any);
+                                        }
+                                    }}
+                                    className="flex-1 min-h-[56px] max-h-48 p-4 bg-transparent resize-none font-medium text-sm leading-relaxed focus:outline-none placeholder:text-muted-foreground/60 scrollbar-hide"
+                                    placeholder="Ask anything about the project..."
+                                    disabled={agentMutation.isPending}
+                                    rows={1}
+                                />
+                                <div className="flex items-center gap-3 pb-2 pr-1">
+                                    <div className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-secondary/50 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 border border-border/50">
+                                        <kbd>⏎</kbd>
+                                        <span>Send</span>
+                                    </div>
+                                    <Button 
+                                        type="submit" 
+                                        size="icon"
+                                        className="h-12 w-12 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-90 hover:scale-105 hover:shadow-primary/40 shrink-0"
+                                        disabled={agentMutation.isPending || !agentQuery.trim()}
+                                    >
+                                        {agentMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mt-4 flex items-center justify-center gap-6 opacity-40 group-focus-within:opacity-100 transition-opacity">
+                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground text-center">
+                                SprintPilot Intelligence Engine v2.0
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </TabsContent>
       </Tabs>
 

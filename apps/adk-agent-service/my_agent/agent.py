@@ -28,7 +28,7 @@ You have access to the following tools:
 8.  `update_issue_status(issue_id, status)`: Use to mark tasks as done or change priority.
 
 IMPORTANT:
-- Project ID is handled automatically by the tools, so you don't need to provide it.
+- Project ID and User ID are injected automatically from the session — never ask the user for them.
 - Always prefer using `search_project_knowledge` over guessing.
 - When creating issues, infer the priority if not stated (default "medium").
 - Be concise and actionable.

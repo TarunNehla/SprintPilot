@@ -368,28 +368,22 @@ function ProjectDetails() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="agent" className="mt-0 h-[calc(100vh-280px)] min-h-[650px] animate-in fade-in-50 slide-in-from-bottom-2">
-            <div className="flex flex-col h-full bg-background border rounded-3xl overflow-hidden shadow-2xl shadow-primary/5 transition-all duration-300 relative">
-                {/* Decorative background elements */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
-                    <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
-                </div>
-
-                {/* Chat Header */}
-                <div className="px-8 py-5 border-b bg-background/80 backdrop-blur-xl flex items-center justify-between sticky top-0 z-10">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 ring-4 ring-primary/10">
-                            <Bot className="h-7 w-7 text-primary-foreground" />
+        <TabsContent value="agent" className="mt-0 h-[calc(100vh-320px)] min-h-[600px] animate-in fade-in-50 slide-in-from-bottom-2">
+            <div className="flex flex-col h-full relative">
+                {/* Chat Header - Simplified */}
+                <div className="py-4 flex items-center justify-between z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Bot className="h-4 w-4 text-primary" />
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h2 className="text-base font-bold tracking-tight">Project Intelligence</h2>
-                                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-none">
-                                    Live
-                                </Badge>
+                                <h2 className="text-sm font-semibold">Agent</h2>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Ready</span>
+                                </div>
                             </div>
-                            <p className="text-xs text-muted-foreground font-medium">Always learning from your project docs</p>
                         </div>
                     </div>
                     {chatMessages.length > 0 && (
@@ -406,45 +400,31 @@ function ProjectDetails() {
                 </div>
 
                 {/* Messages Area */}
-                <div className="flex-1 relative overflow-hidden">
+                <div className="flex-1 relative overflow-hidden bg-secondary/5 rounded-2xl border border-border/50">
                     <ScrollArea className="h-full" ref={chatScrollRef as any}>
-                        <div className="max-w-4xl mx-auto space-y-12 px-6 py-10">
+                        <div className="max-w-3xl mx-auto space-y-8 px-6 py-8">
                             {chatMessages.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center text-center py-12 px-6 animate-in fade-in zoom-in duration-700">
-                                    <div className="relative mb-10">
-                                        <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-                                        <div className="relative w-24 h-24 rounded-[2.5rem] bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-2xl rotate-6 group hover:rotate-0 transition-transform duration-500">
-                                            <Sparkles className="h-12 w-12 text-primary-foreground" />
-                                        </div>
-                                    </div>
-                                    
-                                    <h3 className="text-3xl font-black tracking-tighter mb-4">
-                                        How can I help you <span className="text-primary italic">today?</span>
+                                <div className="flex flex-col items-center justify-center text-center py-20 animate-in fade-in duration-700">
+                                    <h3 className="text-2xl font-bold tracking-tight mb-3">
+                                        Ask anything about {project.name}
                                     </h3>
-                                    <p className="text-base text-muted-foreground max-w-md leading-relaxed font-medium mb-12">
-                                        I've indexed all your project documents and issues. Ask me anything about the codebase or requirements.
+                                    <p className="text-sm text-muted-foreground max-w-sm mb-10">
+                                        I've indexed all project documents and issues. I can help you understand the architecture, track issues, or find requirements.
                                     </p>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
                                         {[
-                                            { label: "Architecture Overview", icon: <Bot className="h-4 w-4" />, query: "Summarize architectural decisions" },
-                                            { label: "Pending Issues", icon: <ListTodo className="h-4 w-4" />, query: "Analyze pending critical issues" },
-                                            { label: "API Requirements", icon: <Wand2 className="h-4 w-4" />, query: "Extract API requirements" },
-                                            { label: "Design Context", icon: <FileText className="h-4 w-4" />, query: "Find relevant design docs" }
+                                            { label: "Summarize Architecture", query: "Summarize the project's architectural decisions" },
+                                            { label: "Critical Issues", query: "Show me all high priority open issues" },
+                                            { label: "API Specs", query: "What are the core API requirements?" },
+                                            { label: "Project Context", query: "What is the main goal of this project?" }
                                         ].map((item) => (
                                             <button 
                                                 key={item.label}
-                                                onClick={() => {
-                                                    setAgentQuery(item.query);
-                                                    // Optional: auto-submit
-                                                }}
-                                                className="group flex flex-col items-start p-5 text-left bg-card border border-border/50 rounded-3xl hover:border-primary hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
+                                                onClick={() => setAgentQuery(item.query)}
+                                                className="p-4 text-left bg-background border border-border/60 rounded-xl hover:border-primary/50 hover:bg-primary/5 transition-all text-sm font-medium"
                                             >
-                                                <div className="p-2 rounded-xl bg-secondary group-hover:bg-primary group-hover:text-primary-foreground transition-colors mb-4">
-                                                    {item.icon}
-                                                </div>
-                                                <span className="text-sm font-bold block mb-1">{item.label}</span>
-                                                <span className="text-xs text-muted-foreground line-clamp-1">{item.query}</span>
+                                                {item.label}
                                             </button>
                                         ))}
                                     </div>
@@ -455,29 +435,29 @@ function ProjectDetails() {
                                         <div 
                                             key={idx} 
                                             className={cn(
-                                                "flex gap-6 animate-in slide-in-from-bottom-6 duration-500",
+                                                "flex gap-4 animate-in slide-in-from-bottom-6 duration-500",
                                                 msg.role === "user" ? "flex-row-reverse" : "flex-row"
                                             )}
                                         >
                                             <div className={cn(
-                                                "flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg border-2 overflow-hidden transition-transform hover:scale-105",
+                                                "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border shadow-sm",
                                                 msg.role === "assistant" 
-                                                    ? "bg-primary text-primary-foreground border-primary/10 rotate-3" 
-                                                    : "bg-background text-foreground border-border -rotate-3"
+                                                    ? "bg-primary text-primary-foreground border-primary" 
+                                                    : "bg-background text-foreground border-border"
                                             )}>
-                                                {msg.role === "assistant" ? <Bot className="h-6 w-6" /> : <User className="h-6 w-6" />}
+                                                {msg.role === "assistant" ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
                                             </div>
 
                                             <div className={cn(
-                                                "flex flex-col gap-4 max-w-[85%] group",
+                                                "flex flex-col gap-2 max-w-[85%]",
                                                 msg.role === "user" ? "items-end" : "items-start"
                                             )}>
-                                                <div className="relative group/bubble">
+                                                <div className="relative group">
                                                     <div className={cn(
-                                                        "rounded-[2.5rem] px-8 py-6 shadow-sm border transition-all duration-300",
+                                                        "rounded-2xl px-5 py-3 shadow-sm border text-sm transition-all",
                                                         msg.role === "user" 
-                                                            ? "bg-primary text-primary-foreground border-primary/20 rounded-tr-none hover:shadow-primary/20 hover:scale-[1.01]" 
-                                                            : "bg-background/95 backdrop-blur-md text-foreground border-border/60 rounded-tl-none hover:shadow-xl hover:border-primary/30 hover:scale-[1.01]"
+                                                            ? "bg-primary text-primary-foreground border-primary" 
+                                                            : "bg-background text-foreground border-border"
                                                     )}>
                                                         {msg.role === "assistant" ? (
                                                             <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-p:leading-relaxed prose-pre:bg-zinc-950 prose-pre:text-zinc-300 prose-pre:border prose-pre:border-white/10 prose-headings:font-black prose-headings:tracking-tighter prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-lg prose-code:before:content-none prose-code:after:content-none prose-code:font-bold">
@@ -488,7 +468,7 @@ function ProjectDetails() {
                                                                 </ReactMarkdown>
                                                             </div>
                                                         ) : (
-                                                            <p className="text-[0.95rem] font-semibold leading-relaxed tracking-tight">{msg.content}</p>
+                                                            <p className="font-medium leading-relaxed">{msg.content}</p>
                                                         )}
                                                     </div>
 
@@ -496,7 +476,7 @@ function ProjectDetails() {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="absolute -right-12 top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity h-8 w-8 rounded-xl bg-background border shadow-sm"
+                                                            className="absolute -right-10 top-0 opacity-0 group-hover/bubble:opacity-100 transition-opacity h-8 w-8 rounded-xl bg-background border shadow-sm"
                                                             onClick={() => {
                                                                 navigator.clipboard.writeText(msg.content);
                                                                 setCopiedIndex(idx);
@@ -509,40 +489,37 @@ function ProjectDetails() {
                                                 </div>
 
                                                 {msg.sources && msg.sources.length > 0 && (
-                                                    <div className="w-full">
-                                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 mb-3 px-2">Sources Found</p>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {msg.sources.map((source, sIdx) => (
-                                                                <button
-                                                                    key={sIdx}
-                                                                    onClick={() => {
-                                                                        if (source.type === "doc") setSelectedDocId(source.id);
-                                                                        else setSelectedIssueId(source.id);
-                                                                    }}
-                                                                    className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-secondary/50 hover:bg-primary/10 border border-border/50 hover:border-primary/30 text-[11px] font-bold transition-all group/source"
-                                                                >
-                                                                    {source.type === 'doc' ? <FileText className="h-3.5 w-3.5 text-primary" /> : <ListTodo className="h-3.5 w-3.5 text-primary" />}
-                                                                    <span className="text-muted-foreground group-hover/source:text-primary truncate max-w-[150px]">{source.title}</span>
-                                                                </button>
-                                                            ))}
-                                                        </div>
+                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                        {msg.sources.map((source, sIdx) => (
+                                                            <button
+                                                                key={sIdx}
+                                                                onClick={() => {
+                                                                    if (source.type === "doc") setSelectedDocId(source.id);
+                                                                    else setSelectedIssueId(source.id);
+                                                                }}
+                                                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background hover:bg-secondary/80 border border-border text-[11px] font-medium transition-all"
+                                                            >
+                                                                {source.type === 'doc' ? <FileText className="h-3 w-3 text-primary" /> : <ListTodo className="h-3 w-3 text-primary" />}
+                                                                <span className="text-muted-foreground truncate max-w-[120px]">{source.title}</span>
+                                                            </button>
+                                                        ))}
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
                                     ))}
                                     {agentMutation.isPending && (
-                                        <div className="flex gap-6 animate-pulse">
-                                            <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-primary/10 border-2 border-primary/10 flex items-center justify-center rotate-3">
-                                                <Bot className="h-6 w-6 text-primary" />
+                                        <div className="flex gap-4 animate-pulse">
+                                            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                                                <Bot className="h-4 w-4 text-primary" />
                                             </div>
-                                            <div className="bg-card border border-border/60 rounded-[2.5rem] rounded-tl-none px-8 py-6 shadow-sm flex items-center gap-3">
-                                                <div className="flex gap-1.5">
-                                                    <span className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                                                    <span className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                                                    <span className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                                            <div className="bg-background border border-border rounded-2xl px-5 py-3 shadow-sm flex items-center gap-2">
+                                                <div className="flex gap-1">
+                                                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
                                                 </div>
-                                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-2">Thinking</span>
+                                                <span className="text-xs font-semibold text-muted-foreground ml-1">Thinking...</span>
                                             </div>
                                         </div>
                                     )}
@@ -553,53 +530,41 @@ function ProjectDetails() {
                     </ScrollArea>
                 </div>
 
-                {/* Input Area */}
-                <div className="p-8 border-t bg-background/80 backdrop-blur-xl sticky bottom-0 z-10">
+                {/* Input Area - Integrated */}
+                <div className="pt-6">
                     <form 
                         onSubmit={handleAgentQuery} 
-                        className="max-w-4xl mx-auto"
+                        className="max-w-3xl mx-auto"
                     >
-                        <div className="relative group p-1 rounded-[2rem] bg-gradient-to-br from-border/50 to-border/20 focus-within:from-primary/20 focus-within:to-primary/5 transition-all duration-500">
-                            <div className="relative flex items-end gap-3 bg-background rounded-[1.85rem] p-2 pr-3 border border-border/50 shadow-inner group-focus-within:border-primary/50 group-focus-within:shadow-2xl group-focus-within:shadow-primary/10 transition-all duration-500">
-                                <textarea 
-                                    value={agentQuery}
-                                    onChange={(e) => setAgentQuery(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleAgentQuery(e as any);
-                                        }
-                                    }}
-                                    className="flex-1 min-h-[56px] max-h-48 p-4 bg-transparent resize-none font-medium text-sm leading-relaxed focus:outline-none placeholder:text-muted-foreground/60 scrollbar-hide"
-                                    placeholder="Ask anything about the project..."
-                                    disabled={agentMutation.isPending}
-                                    rows={1}
-                                />
-                                <div className="flex items-center gap-3 pb-2 pr-1">
-                                    <div className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-secondary/50 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 border border-border/50">
-                                        <kbd>⏎</kbd>
-                                        <span>Send</span>
-                                    </div>
-                                    <Button 
-                                        type="submit" 
-                                        size="icon"
-                                        className="h-12 w-12 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-90 hover:scale-105 hover:shadow-primary/40 shrink-0"
-                                        disabled={agentMutation.isPending || !agentQuery.trim()}
-                                    >
-                                        {agentMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="mt-4 flex items-center justify-center gap-6 opacity-40 group-focus-within:opacity-100 transition-opacity">
-                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground text-center">
-                                SprintPilot Intelligence Engine v2.0
-                            </p>
+                        <div className="relative flex items-end gap-2 bg-background rounded-xl border border-border p-2 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all shadow-sm">
+                            <textarea 
+                                value={agentQuery}
+                                onChange={(e) => setAgentQuery(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleAgentQuery(e as any);
+                                    }
+                                }}
+                                className="flex-1 min-h-[44px] max-h-32 p-3 bg-transparent resize-none text-sm leading-relaxed focus:outline-none placeholder:text-muted-foreground/60"
+                                placeholder="Message agent..."
+                                disabled={agentMutation.isPending}
+                                rows={1}
+                            />
+                            <Button 
+                                type="submit" 
+                                size="icon"
+                                className="h-10 w-10 shrink-0 rounded-lg"
+                                disabled={agentMutation.isPending || !agentQuery.trim()}
+                            >
+                                {agentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            </Button>
                         </div>
                     </form>
                 </div>
             </div>
         </TabsContent>
+
       </Tabs>
 
       <UploadDocumentDialog 

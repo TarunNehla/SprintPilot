@@ -97,7 +97,7 @@ const agentServiceAuthMiddleware = async (c: any, next: any) => {
     return c.json({ error: "Missing agent secret" }, 401);
   }
 
-  if (secret.trim() !== c.env.AGENT_SERVICE_SECRET.trim()) {
+  if (secret.trim() !== (c.env.AGENT_SERVICE_SECRET?.trim() ?? "")) {
     return c.json({ error: "Invalid agent secret" }, 403);
   }
 
@@ -1047,6 +1047,10 @@ app.post("/api/agent/query", authMiddleware, async (c) => {
         new_message: {
           role: "user",
           parts: [{ text: body.query }],
+        },
+        state_delta: {
+          project_id: body.projectId,
+          user_id: user.id,
         },
       }),
     });

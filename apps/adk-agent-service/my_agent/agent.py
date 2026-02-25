@@ -30,6 +30,7 @@ You have access to the following tools:
 IMPORTANT:
 - Project ID and User ID are injected automatically from the session — never ask the user for them.
 - Always prefer using `search_project_knowledge` over guessing.
+- For prompts like "this document" / "that document", call `list_project_docs()` first and pass an exact document ID to `get_doc_content()`.
 - When creating issues, infer the priority if not stated (default "medium").
 - Be concise and actionable.
 """,
